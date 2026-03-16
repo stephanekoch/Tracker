@@ -85,6 +85,8 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
 .toast{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none;}
 .toast-inner{background:var(--accent);color:white;border-radius:16px;padding:18px 32px;font-size:17px;font-family:'Lato',sans-serif;font-weight:700;display:flex;align-items:center;gap:10px;}
 .hidden{display:none!important;}
+.confetti-piece{position:fixed;width:10px;height:10px;top:-10px;opacity:0;pointer-events:none;z-index:999;border-radius:2px;animation:confetti-fall linear forwards;}
+@keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(110vh) rotate(720deg);opacity:0;}}
 .progress-wrap{margin-bottom:8px;}
 .progress-lbl{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
 .progress-lbl span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
@@ -310,6 +312,7 @@ function countProgress(){
   return { filled, total };
 }
 
+let _wasComplete = false;
 function updateProgress(){
   const {filled, total} = countProgress();
   const pct = Math.round(filled/total*100);
@@ -317,9 +320,13 @@ function updateProgress(){
   const lbl = document.getElementById('progress-lbl-text');
   if(!fill || !lbl) return;
   fill.style.width = pct + '%';
-  fill.style.background = filled === total ? '#5a8a5a' : 'var(--accent)';
+  const complete = filled === total;
+  fill.style.background = complete ? '#5a8a5a' : 'var(--accent)';
   lbl.textContent = filled + ' / ' + total;
-  lbl.style.color = filled === total ? '#5a8a5a' : 'var(--accent)';
+  lbl.style.color = complete ? '#5a8a5a' : 'var(--accent)';
+  // Fire confetti only once when first reaching complete
+  if(complete && !_wasComplete) launchConfetti();
+  _wasComplete = complete;
 }
 function setDot(color){ document.getElementById('status-dot').style.background=color; }
 
@@ -631,6 +638,30 @@ function renderHistory(){
   }).join('');
 }
 function loadDate(date){ document.getElementById('entry-date').value=date; onDateChange(); switchTab('log'); }
+
+// Confetti
+function launchConfetti(){
+  const colors=['#8b5e3c','#c49a6c','#f5d5a0','#5a8a5a','#2c1f0e','#e8ddd0','#a0522d','#fdf8f2'];
+  const count=120;
+  for(let i=0;i<count;i++){
+    setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='confetti-piece';
+      const size=Math.random()*8+6;
+      el.style.cssText=[
+        'left:'+Math.random()*100+'vw',
+        'width:'+size+'px',
+        'height:'+size+'px',
+        'background:'+colors[Math.floor(Math.random()*colors.length)],
+        'animation-duration:'+(Math.random()*2+1.5)+'s',
+        'animation-delay:'+Math.random()*0.5+'s',
+        'border-radius:'+(Math.random()>0.5?'50%':'2px'),
+      ].join(';');
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(), 4000);
+    }, i*20);
+  }
+}
 
 // Init — load from Sheets
 setDot('#c4a882');
