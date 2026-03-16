@@ -283,9 +283,9 @@ const ICONS_SM = { hackChinese: makeIcon('#4a5ae8','H',28), duChinese: makeIcon(
 // Sleep dropdowns
 (function(){
   const h = document.getElementById('sleep-h');
-  for(let i=0;i<=23;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i+'h'; h.appendChild(o); }
+  for(let i=0;i<=23;i++){ const o=document.createElement('option'); o.value=String(i); o.textContent=i+'h'; h.appendChild(o); }
   const m = document.getElementById('sleep-m');
-  for(let i=0;i<=59;i++){ const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.textContent=String(i).padStart(2,'0')+'m'; m.appendChild(o); }
+  for(let i=0;i<=59;i++){ const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.textContent=String(i).padStart(2,'0')+' min'; m.appendChild(o); }
 })();
 
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
@@ -293,13 +293,10 @@ function fmtDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{
 function isComplete(e){ return !!(e.steps&&e.bodyweight&&e.calories&&e.sleep&&(e.hackChinese||e.duChinese||e.yoyoChinese)); }
 
 function countProgress(){
-  // Count filled fields: gym, supplements, vitality(non-zero), steps, bodyweight, calories, sleep, chinese(at least one)
-  let filled = 0, total = 8;
-  if(toggles.gym || toggles.supplements) filled++; else if(toggles.gym!==undefined) { if(toggles.gym) filled++; if(toggles.supplements) filled++; }
-  // Count each individually
-  filled = 0;
-  if(toggles.gym !== undefined) filled += toggles.gym ? 1 : 0;
-  if(toggles.supplements !== undefined) filled += toggles.supplements ? 1 : 0;
+  // Fields: supplements, vitality(>0), steps, bodyweight, calories, sleep, chinese(at least one) = 7 total
+  // Gym intentionally excluded — not every day is a gym day
+  let filled = 0, total = 7;
+  if(toggles.supplements) filled++;
   if(vit > 0) filled++;
   const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
   if(stepsRaw) filled++;
@@ -360,12 +357,21 @@ function fillForm(e){
   document.getElementById('calories').value=e.calories||'';
   document.getElementById('hackChineseWords').value=e.hackChineseWords||'';
   updateProgress();
-  // Sleep
+  // Sleep — parse "7:36" -> hours "7", minutes "36"
   if(e.sleep&&e.sleep.includes(':')){
-    const [h,m]=e.sleep.split(':');
-    document.getElementById('sleep-h').value=h;
-    document.getElementById('sleep-m').value=String(m).padStart(2,'0');
-  } else { document.getElementById('sleep-h').value=''; document.getElementById('sleep-m').value=''; }
+    const parts=e.sleep.split(':');
+    const hVal=String(parseInt(parts[0]||0));
+    const mVal=String(parseInt(parts[1]||0)).padStart(2,'0');
+    // Set after a tick to ensure options are rendered
+    setTimeout(()=>{
+      document.getElementById('sleep-h').value=hVal;
+      document.getElementById('sleep-m').value=mVal;
+      updateProgress();
+    },0);
+  } else {
+    document.getElementById('sleep-h').value='';
+    document.getElementById('sleep-m').value='';
+  }
 }
 function blankForm(date){
   fillForm({date,gym:false,supplements:false,vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
