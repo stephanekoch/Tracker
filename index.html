@@ -85,6 +85,15 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
 .toast{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none;}
 .toast-inner{background:var(--accent);color:white;border-radius:16px;padding:18px 32px;font-size:17px;font-family:'Lato',sans-serif;font-weight:700;display:flex;align-items:center;gap:10px;}
 .hidden{display:none!important;}
+.progress-wrap{margin-bottom:8px;}
+.progress-lbl{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.progress-lbl span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.progress-lbl strong{font-size:10px;color:var(--accent);font-weight:700;}
+.progress-track{background:var(--border);border-radius:4px;height:5px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s,background .3s;}
+.hist-badge{display:inline-flex;width:16px;height:16px;border-radius:50%;background:#5a8a5a;color:white;font-size:9px;align-items:center;justify-content:center;vertical-align:middle;margin-left:5px;flex-shrink:0;}
+.hist-row.complete{opacity:1;}
+.hist-row.partial{opacity:0.6;}
 </style>
 </head>
 <body>
@@ -130,9 +139,9 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
             <button class="vit-btn" id="vit-8" onclick="setVit(8)">8</button>
           </div>
         </div>
-        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this)"/></div>
-        <div class="field"><div class="field-lbl">Bodyweight (kg)</div><input type="number" step="0.1" id="bodyweight" placeholder="0.0"/></div>
-        <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0"/></div>
+        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this);updateProgress()"/></div>
+        <div class="field"><div class="field-lbl">Bodyweight (kg)</div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()"/></div>
+        <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/></div>
         <div class="field">
           <div class="field-lbl">Sleep</div>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -159,6 +168,10 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
           <div class="track" id="track-yoyoChinese" style="background:#e8ddd0"><div class="thumb" id="thumb-yoyoChinese" style="left:3px"></div></div>
           <div><div class="tgl-lbl">Yoyo Chinese</div><div class="tgl-sub">Video lessons</div></div>
         </div>
+      </div>
+      <div class="progress-wrap" id="progress-wrap">
+        <div class="progress-lbl"><span>Today's progress</span><strong id="progress-lbl-text">0 / 9</strong></div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%;background:var(--accent);"></div></div>
       </div>
       <button class="save-btn" id="save-btn" onclick="handleSave()">Save to Sheet</button>
     </div>
@@ -278,6 +291,37 @@ const ICONS_SM = { hackChinese: makeIcon('#4a5ae8','H',28), duChinese: makeIcon(
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function fmtDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
 function isComplete(e){ return !!(e.steps&&e.bodyweight&&e.calories&&e.sleep&&(e.hackChinese||e.duChinese||e.yoyoChinese)); }
+
+function countProgress(){
+  // Count filled fields: gym, supplements, vitality(non-zero), steps, bodyweight, calories, sleep, chinese(at least one)
+  let filled = 0, total = 8;
+  if(toggles.gym || toggles.supplements) filled++; else if(toggles.gym!==undefined) { if(toggles.gym) filled++; if(toggles.supplements) filled++; }
+  // Count each individually
+  filled = 0;
+  if(toggles.gym !== undefined) filled += toggles.gym ? 1 : 0;
+  if(toggles.supplements !== undefined) filled += toggles.supplements ? 1 : 0;
+  if(vit > 0) filled++;
+  const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
+  if(stepsRaw) filled++;
+  if(document.getElementById('bodyweight').value) filled++;
+  if(document.getElementById('calories').value) filled++;
+  const sh = document.getElementById('sleep-h').value, sm = document.getElementById('sleep-m').value;
+  if(sh && sm) filled++;
+  if(toggles.hackChinese || toggles.duChinese || toggles.yoyoChinese) filled++;
+  return { filled, total };
+}
+
+function updateProgress(){
+  const {filled, total} = countProgress();
+  const pct = Math.round(filled/total*100);
+  const fill = document.getElementById('progress-fill');
+  const lbl = document.getElementById('progress-lbl-text');
+  if(!fill || !lbl) return;
+  fill.style.width = pct + '%';
+  fill.style.background = filled === total ? '#5a8a5a' : 'var(--accent)';
+  lbl.textContent = filled + ' / ' + total;
+  lbl.style.color = filled === total ? '#5a8a5a' : 'var(--accent)';
+}
 function setDot(color){ document.getElementById('status-dot').style.background=color; }
 
 function fmtSteps(el){
@@ -291,9 +335,10 @@ function tgl(key){
   document.getElementById('track-'+key).style.background=toggles[key]?'#8b5e3c':'#e8ddd0';
   document.getElementById('thumb-'+key).style.left=toggles[key]?'23px':'3px';
   if(key==='hackChinese') document.getElementById('words-wrap').classList.toggle('hidden',!toggles[key]);
+  updateProgress();
 }
 function setTgl(key,val){ toggles[key]=!!val; document.getElementById('track-'+key).style.background=val?'#8b5e3c':'#e8ddd0'; document.getElementById('thumb-'+key).style.left=val?'23px':'3px'; }
-function setVit(v){ vit=v; [0,3,5,8].forEach(x=>document.getElementById('vit-'+x).classList.toggle('active',x===v)); }
+function setVit(v){ vit=v; [0,3,5,8].forEach(x=>document.getElementById('vit-'+x).classList.toggle('active',x===v)); updateProgress(); }
 
 function readForm(){
   const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
@@ -314,6 +359,7 @@ function fillForm(e){
   document.getElementById('bodyweight').value=e.bodyweight||'';
   document.getElementById('calories').value=e.calories||'';
   document.getElementById('hackChineseWords').value=e.hackChineseWords||'';
+  updateProgress();
   // Sleep
   if(e.sleep&&e.sleep.includes(':')){
     const [h,m]=e.sleep.split(':');
@@ -534,13 +580,14 @@ function renderHistory(){
   if(!entries.length){list.innerHTML='<div class="empty">No entries yet.<br>Start logging to see your history.</div>';return;}
   list.innerHTML=[...entries].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>{
     const meta=[e.bodyweight&&parseFloat(e.bodyweight).toFixed(1)+' kg',e.steps&&parseInt(e.steps).toLocaleString()+' steps',e.calories&&parseInt(e.calories).toLocaleString()+' kcal',e.hackChineseWords&&parseInt(e.hackChineseWords).toLocaleString()+' words'].filter(Boolean).join(' · ')||'No metrics logged';
-    const dot=isComplete(e)?'<span class="complete-dot"></span>':'';
+    const badge=isComplete(e)?'<span class="hist-badge">✓</span>':'';
+    const rowClass=isComplete(e)?'hist-row complete':'hist-row partial';
     let icons='';
     if(e.gym) icons+='<span style="font-size:20px">🏋️</span>';
     if(e.hackChinese) icons+=`<img class="hist-icon" src="${ICONS.hackChinese}"/>`;
     if(e.duChinese) icons+=`<img class="hist-icon" src="${ICONS.duChinese}"/>`;
     if(e.yoyoChinese) icons+=`<img class="hist-icon" src="${ICONS.yoyoChinese}"/>`;
-    return`<div class="hist-row" onclick="loadDate('${e.date}')"><div style="min-width:0;flex:1"><div class="hist-date">${fmtDate(e.date)}${dot}</div><div class="hist-meta">${meta}</div></div><div class="hist-icons">${icons}</div></div>`;
+    return`<div class="${rowClass}" onclick="loadDate('${e.date}')"><div style="min-width:0;flex:1"><div class="hist-date">${fmtDate(e.date)}${badge}</div><div class="hist-meta">${meta}</div></div><div class="hist-icons">${icons}</div></div>`;
   }).join('');
 }
 function loadDate(date){ document.getElementById('entry-date').value=date; onDateChange(); switchTab('log'); }
