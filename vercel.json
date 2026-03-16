@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/sheets", "destination": "/api/sheets" },
+    { "source": "/(.*)", "destination": "/public/index.html" }
+  ]
+}

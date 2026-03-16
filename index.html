@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Tracker"/>
+<meta name="theme-color" content="#fdf8f2"/>
+<link rel="manifest" href="manifest.json"/>
+<title>Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#fdf8f2;--card:#fff;--border:#e8ddd0;--accent:#8b5e3c;--accent2:#c49a6c;--muted:#c4a882;--text:#2c1f0e;--text2:#7a5c3a;}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Lato',sans-serif;color:var(--text);-webkit-tap-highlight-color:transparent;}
+.app{display:flex;flex-direction:column;height:100%;max-width:560px;margin:0 auto;}
+.header{flex-shrink:0;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 18px 12px;}
+.header-top{display:flex;align-items:center;gap:10px;}
+.app-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--text);font-weight:700;font-style:italic;flex:1;}
+.app-sub{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:2px;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);transition:background .3s;}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 16px;}
+.bottom-nav{flex-shrink:0;background:var(--card);border-top:1px solid var(--border);display:flex;padding:8px 0 max(env(safe-area-inset-bottom),6px);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;cursor:pointer;padding:2px 0;}
+.nav-btn span{font-size:10px;color:var(--muted);font-family:'Lato',sans-serif;letter-spacing:.04em;}
+.nav-btn.active span{color:var(--accent);font-weight:700;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;}
+.sec{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+.date-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;}
+.date-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;}
+input[type=date]{border:none;background:transparent;font-family:'Lato',sans-serif;font-size:15px;color:var(--accent);outline:none;cursor:pointer;font-weight:700;}
+.field{margin-bottom:12px;}
+.field:last-child{margin-bottom:0;}
+.field-lbl{font-size:10px;color:var(--muted);margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase;}
+.field input,.field select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Lato',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;appearance:none;}
+.field input:focus,.field select:focus{border-color:var(--accent);}
+.sel-wrap{position:relative;}
+.sel-wrap select{padding-right:30px;}
+.sel-arr{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font-size:12px;}
+.toggle-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;cursor:pointer;user-select:none;}
+.toggle-row:last-child{margin-bottom:0;}
+.track{width:44px;height:26px;border-radius:13px;position:relative;flex-shrink:0;transition:background .2s;}
+.thumb{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.15);}
+.tgl-lbl{font-size:15px;color:var(--text);}
+.tgl-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.vit-row{display:flex;gap:8px;}
+.vit-btn{flex:1;padding:11px 4px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Lato',sans-serif;font-size:16px;cursor:pointer;font-weight:700;}
+.vit-btn.active{background:var(--accent);color:white;border-color:var(--accent);}
+.indent{padding-left:56px;margin-top:-4px;margin-bottom:6px;}
+.divider{height:1px;background:var(--border);margin:10px 0;}
+.save-btn{width:100%;padding:16px;border:none;border-radius:11px;font-family:'Lato',sans-serif;font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--accent);color:white;margin-bottom:16px;-webkit-appearance:none;}
+.save-btn.saved{background:#6a9e6a;}
+.save-btn.error{background:#c0392b;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
+.stat-val{font-family:'Playfair Display',serif;font-size:28px;color:var(--accent);font-weight:700;line-height:1;}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:5px;line-height:1.4;}
+.range-sel{display:flex;gap:4px;margin-bottom:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;}
+.range-btn{flex:1;padding:6px 2px;border:none;border-radius:7px;background:transparent;font-family:'Lato',sans-serif;font-size:9px;cursor:pointer;color:var(--muted);white-space:nowrap;text-align:center;}
+.range-btn.active{background:var(--accent);color:white;font-weight:700;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;}
+.chart-ttl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:10px;}
+.study-pills{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
+.pill{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--card);font-family:'Lato',sans-serif;font-size:10px;cursor:pointer;color:var(--muted);white-space:nowrap;}
+.pill.active{background:var(--accent);color:white;border-color:var(--accent);}
+.pill-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.hist-row{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.hist-row:active{background:#fdf0e6;}
+.hist-date{font-family:'Playfair Display',serif;font-size:15px;font-style:italic;color:var(--text);margin-bottom:2px;}
+.hist-meta{font-size:11px;color:var(--muted);}
+.hist-icons{display:flex;gap:5px;align-items:center;flex-shrink:0;margin-left:10px;}
+.hist-icon{width:24px;height:24px;border-radius:50%;}
+.complete-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent2);margin-left:6px;vertical-align:middle;}
+.empty{text-align:center;color:var(--muted);font-size:13px;margin-top:60px;line-height:1.8;}
+.overlay{position:fixed;inset:0;background:rgba(44,31,14,.35);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;}
+.modal{background:var(--card);border-radius:18px;padding:24px;max-width:310px;width:100%;border:1px solid var(--border);}
+.modal h3{font-family:'Playfair Display',serif;font-size:19px;color:var(--text);margin-bottom:8px;font-style:italic;}
+.modal p{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px;}
+.modal-btns{display:flex;gap:10px;}
+.btn-sec{flex:1;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--card);font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;color:var(--accent);font-weight:700;}
+.btn-pri{flex:1;padding:11px;border:none;border-radius:9px;background:var(--accent);font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;color:white;font-weight:700;}
+.toast{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.toast-inner{background:var(--accent);color:white;border-radius:16px;padding:18px 32px;font-size:17px;font-family:'Lato',sans-serif;font-weight:700;display:flex;align-items:center;gap:10px;}
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
+      <div>
+        <div class="app-title">Tracker</div>
+        <div class="app-sub">Health & Chinese</div>
+      </div>
+      <div class="dot" id="status-dot" style="margin-left:auto;"></div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="content">
+
+    <!-- LOG -->
+    <div id="tab-log">
+      <div class="card date-row">
+        <span class="date-lbl">Date</span>
+        <input type="date" id="entry-date" onchange="onDateChange()"/>
+      </div>
+      <div class="card">
+        <div class="sec">Health</div>
+        <div class="toggle-row" onclick="tgl('gym')">
+          <div class="track" id="track-gym" style="background:#e8ddd0"><div class="thumb" id="thumb-gym" style="left:3px"></div></div>
+          <div><div class="tgl-lbl">Gym session</div></div>
+        </div>
+        <div class="toggle-row" onclick="tgl('supplements')">
+          <div class="track" id="track-supplements" style="background:#e8ddd0"><div class="thumb" id="thumb-supplements" style="left:3px"></div></div>
+          <div><div class="tgl-lbl">Supplements</div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <div class="field-lbl">Vitality points</div>
+          <div class="vit-row">
+            <button class="vit-btn active" id="vit-0" onclick="setVit(0)">0</button>
+            <button class="vit-btn" id="vit-3" onclick="setVit(3)">3</button>
+            <button class="vit-btn" id="vit-5" onclick="setVit(5)">5</button>
+            <button class="vit-btn" id="vit-8" onclick="setVit(8)">8</button>
+          </div>
+        </div>
+        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this)"/></div>
+        <div class="field"><div class="field-lbl">Bodyweight (kg)</div><input type="number" step="0.1" id="bodyweight" placeholder="0.0"/></div>
+        <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0"/></div>
+        <div class="field">
+          <div class="field-lbl">Sleep</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div class="sel-wrap" style="flex:1"><select id="sleep-h"><option value="">Hours</option></select><span class="sel-arr">▾</span></div>
+            <span style="color:var(--muted);font-size:18px;">:</span>
+            <div class="sel-wrap" style="flex:1"><select id="sleep-m"><option value="">Mins</option></select><span class="sel-arr">▾</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sec">Chinese Study</div>
+        <div class="toggle-row" onclick="tgl('hackChinese')">
+          <div class="track" id="track-hackChinese" style="background:#e8ddd0"><div class="thumb" id="thumb-hackChinese" style="left:3px"></div></div>
+          <div><div class="tgl-lbl">HackChinese</div><div class="tgl-sub">Vocabulary flashcards</div></div>
+        </div>
+        <div id="words-wrap" class="indent hidden">
+          <div class="field"><div class="field-lbl">Words known</div><input type="number" id="hackChineseWords" placeholder="0"/></div>
+        </div>
+        <div class="toggle-row" onclick="tgl('duChinese')">
+          <div class="track" id="track-duChinese" style="background:#e8ddd0"><div class="thumb" id="thumb-duChinese" style="left:3px"></div></div>
+          <div><div class="tgl-lbl">DuChinese</div><div class="tgl-sub">Reading practice</div></div>
+        </div>
+        <div class="toggle-row" onclick="tgl('yoyoChinese')">
+          <div class="track" id="track-yoyoChinese" style="background:#e8ddd0"><div class="thumb" id="thumb-yoyoChinese" style="left:3px"></div></div>
+          <div><div class="tgl-lbl">Yoyo Chinese</div><div class="tgl-sub">Video lessons</div></div>
+        </div>
+      </div>
+      <button class="save-btn" id="save-btn" onclick="handleSave()">Save to Sheet</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="hidden">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="stat-streak">—</div><div class="stat-lbl">Days fully logged streak</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-week">—</div><div class="stat-lbl">Days fully logged<br/><span style="font-size:10px;opacity:.7">last 7 days</span></div></div>
+      </div>
+      <div class="range-sel">
+        <button class="range-btn active" onclick="setRange(7,this)">Last 7 days</button>
+        <button class="range-btn" onclick="setRange(30,this)">1 month</button>
+        <button class="range-btn" onclick="setRange(91,this)">3 months</button>
+        <button class="range-btn" onclick="setRange(182,this)">6 months</button>
+        <button class="range-btn" onclick="setRange(365,this)">12 months</button>
+      </div>
+      <div id="charts-area"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="tab-history" class="hidden">
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-log" onclick="switchTab('log')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5e3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Log</span>
+    </button>
+    <button class="nav-btn" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c4a882" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="nav-btn" id="nav-history" onclick="switchTab('history')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c4a882" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>History</span>
+    </button>
+  </div>
+
+  <!-- Modals -->
+  <div class="overlay hidden" id="conflict-modal">
+    <div class="modal">
+      <h3>Already have an entry</h3>
+      <p>You've already logged data for this date. Do you want to overwrite it?</p>
+      <div class="modal-btns">
+        <button class="btn-sec" onclick="closeConflict(false)">Cancel</button>
+        <button class="btn-pri" onclick="closeConflict(true)">Overwrite</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast hidden" id="toast"><div class="toast-inner">✓ Entry saved!</div></div>
+</div>
+
+<script>
+const API = '/api/sheets';
+let entries = [], toggles = {gym:false,supplements:false,hackChinese:false,duChinese:false,yoyoChinese:false};
+let vit = 0, pendingSave = null, rangeDays = 7, studyFilter = {hackChinese:true,duChinese:true,yoyoChinese:true}, chartsBuilt = false;
+
+// Favicon
+(function(){
+  const c = document.getElementById('fav-canvas'), ctx = c.getContext('2d'), s = 28;
+  ctx.fillStyle = '#8b5e3c';
+  if(ctx.roundRect) ctx.roundRect(0,0,s,s,6); else ctx.rect(0,0,s,s);
+  ctx.fill();
+  ctx.strokeStyle='white'; ctx.lineWidth=2.2; ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(1,14); ctx.lineTo(6,14); ctx.lineTo(9,7); ctx.lineTo(12,21); ctx.lineTo(15,10); ctx.lineTo(18,14); ctx.lineTo(27,14); ctx.stroke();
+  const link = document.createElement('link'); link.rel='icon'; link.href=c.toDataURL(); document.head.appendChild(link);
+  const apple = document.createElement('link'); apple.rel='apple-touch-icon'; apple.href=c.toDataURL(); document.head.appendChild(apple);
+})();
+
+// Icon data URLs
+function makeIcon(color, letter, size=48){
+  const c=document.createElement('canvas'); c.width=size; c.height=size;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=color; ctx.beginPath(); ctx.arc(size/2,size/2,size/2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.font=`bold ${size*.5}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(letter, size/2, size/2+size*.03);
+  return c.toDataURL();
+}
+const ICONS = { hackChinese: makeIcon('#4a5ae8','H'), duChinese: makeIcon('#c0392b','D'), yoyoChinese: makeIcon('#1ab5a0','Y') };
+const ICONS_SM = { hackChinese: makeIcon('#4a5ae8','H',28), duChinese: makeIcon('#c0392b','D',28), yoyoChinese: makeIcon('#1ab5a0','Y',28) };
+
+// Sleep dropdowns
+(function(){
+  const h = document.getElementById('sleep-h');
+  for(let i=3;i<=15;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i+'h'; h.appendChild(o); }
+  const m = document.getElementById('sleep-m');
+  for(let i=0;i<60;i+=5){ const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.textContent=String(i).padStart(2,'0')+'m'; m.appendChild(o); }
+})();
+
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function fmtDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function isComplete(e){ return !!(e.steps&&e.bodyweight&&e.calories&&e.sleep&&(e.hackChinese||e.duChinese||e.yoyoChinese)); }
+function setDot(color){ document.getElementById('status-dot').style.background=color; }
+
+function fmtSteps(el){
+  const raw = el.value.replace(/,/g,'');
+  if(raw===''||/^\d+$/.test(raw)) el.value = raw ? parseInt(raw).toLocaleString() : '';
+}
+
+// Toggles
+function tgl(key){
+  toggles[key]=!toggles[key];
+  document.getElementById('track-'+key).style.background=toggles[key]?'#8b5e3c':'#e8ddd0';
+  document.getElementById('thumb-'+key).style.left=toggles[key]?'23px':'3px';
+  if(key==='hackChinese') document.getElementById('words-wrap').classList.toggle('hidden',!toggles[key]);
+}
+function setTgl(key,val){ toggles[key]=!!val; document.getElementById('track-'+key).style.background=val?'#8b5e3c':'#e8ddd0'; document.getElementById('thumb-'+key).style.left=val?'23px':'3px'; }
+function setVit(v){ vit=v; [0,3,5,8].forEach(x=>document.getElementById('vit-'+x).classList.toggle('active',x===v)); }
+
+function readForm(){
+  const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
+  const sh = document.getElementById('sleep-h').value, sm = document.getElementById('sleep-m').value;
+  const sleep = sh&&sm ? sh+':'+sm : '';
+  return { date:document.getElementById('entry-date').value, gym:toggles.gym, supplements:toggles.supplements, vitalityPoints:vit,
+    steps:stepsRaw, bodyweight:document.getElementById('bodyweight').value, calories:document.getElementById('calories').value,
+    sleep, hackChinese:toggles.hackChinese, hackChineseWords:document.getElementById('hackChineseWords').value,
+    duChinese:toggles.duChinese, yoyoChinese:toggles.yoyoChinese };
+}
+
+function fillForm(e){
+  document.getElementById('entry-date').value=e.date;
+  ['gym','supplements','hackChinese','duChinese','yoyoChinese'].forEach(k=>setTgl(k,e[k]));
+  document.getElementById('words-wrap').classList.toggle('hidden',!e.hackChinese);
+  setVit(e.vitalityPoints||0);
+  document.getElementById('steps').value = e.steps ? parseInt(e.steps).toLocaleString() : '';
+  document.getElementById('bodyweight').value=e.bodyweight||'';
+  document.getElementById('calories').value=e.calories||'';
+  document.getElementById('hackChineseWords').value=e.hackChineseWords||'';
+  // Sleep
+  if(e.sleep&&e.sleep.includes(':')){
+    const [h,m]=e.sleep.split(':');
+    document.getElementById('sleep-h').value=h;
+    document.getElementById('sleep-m').value=String(m).padStart(2,'0');
+  } else { document.getElementById('sleep-h').value=''; document.getElementById('sleep-m').value=''; }
+}
+function blankForm(date){
+  fillForm({date,gym:false,supplements:false,vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
+}
+function onDateChange(){
+  const date=document.getElementById('entry-date').value;
+  const ex=entries.find(e=>e.date===date);
+  if(ex) fillForm(ex); else blankForm(date);
+}
+
+// Save
+function handleSave(){
+  const form=readForm(); if(!form.date) return;
+  const existing=entries.find(e=>e.date===form.date);
+  if(existing&&(existing.steps||existing.bodyweight||existing.calories)){
+    pendingSave=form; document.getElementById('conflict-modal').classList.remove('hidden');
+  } else { doSave(form); }
+}
+function closeConflict(doIt){
+  document.getElementById('conflict-modal').classList.add('hidden');
+  if(doIt&&pendingSave) doSave(pendingSave);
+  else { pendingSave=null; switchTab('history'); }
+}
+function doSave(form){
+  pendingSave=null;
+  const btn=document.getElementById('save-btn'); btn.textContent='Saving…'; btn.disabled=true;
+  fetch(API,{method:'POST',body:JSON.stringify({action:'saveRow',...form})})
+    .then(r=>r.json())
+    .then(()=>{
+      const idx=entries.findIndex(e=>e.date===form.date);
+      if(idx>=0) entries[idx]=form; else { entries.push(form); entries.sort((a,b)=>a.date.localeCompare(b.date)); }
+      btn.textContent='Save to Sheet'; btn.disabled=false;
+      showToast(); switchTab('history');
+    })
+    .catch(()=>{ btn.textContent='Error — retry'; btn.classList.add('error'); btn.disabled=false; });
+}
+function showToast(){
+  const t=document.getElementById('toast'); t.classList.remove('hidden');
+  setTimeout(()=>t.classList.add('hidden'),2000);
+}
+
+// Tabs
+function switchTab(name){
+  ['log','dashboard','history'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('hidden',t!==name);
+    const nb=document.getElementById('nav-'+t);
+    nb.classList.toggle('active',t===name);
+    nb.querySelector('svg').setAttribute('stroke',t===name?'#8b5e3c':'#c4a882');
+  });
+  if(name==='dashboard') renderDashboard();
+  if(name==='history') renderHistory();
+}
+function setRange(days,el){
+  rangeDays=days;
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active'); renderCharts();
+}
+
+// Data helpers
+function getWeekKey(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  const jan4=new Date(d.getFullYear(),0,4);
+  const wn=Math.ceil(((d-jan4)/86400000+jan4.getDay()+1)/7);
+  return d.getFullYear()+'-W'+String(wn).padStart(2,'0');
+}
+function getFiltered(){
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-rangeDays);
+  return entries.filter(e=>e.date>=cutoff.toISOString().split('T')[0]);
+}
+function avgOf(arr){ const v=arr.filter(x=>x!==null&&!isNaN(x)); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; }
+function fmtV(v,fmt){
+  if(v===null||v===undefined) return '';
+  if(fmt==='#,##0kg') return Math.round(v).toLocaleString()+'kg';
+  if(fmt==='#,##0') return Math.round(v).toLocaleString();
+  if(fmt==='0.0') return Number(v).toFixed(1);
+  return String(Math.round(v));
+}
+
+// Weekly aggregation
+function weeklyAvgData(filtered, key, parseFn){
+  const weeks={};
+  filtered.forEach(e=>{ const v=e[key]?parseFn(e[key]):null; if(v===null||isNaN(v)) return; const k=getWeekKey(e.date); if(!weeks[k]) weeks[k]={label:fmtDate(e.date),sum:0,count:0}; weeks[k].sum+=v; weeks[k].count++; });
+  const w=Object.values(weeks); return {labels:w.map(x=>x.label),data:w.map(x=>x.count?x.sum/x.count:null)};
+}
+function weeklySumData(filtered, key, parseFn, capAt){
+  const weeks={};
+  filtered.forEach(e=>{ const v=e[key]?parseFn(e[key]):0; const k=getWeekKey(e.date); if(!weeks[k]) weeks[k]={label:fmtDate(e.date),sum:0}; weeks[k].sum+=v; });
+  const w=Object.values(weeks); return {labels:w.map(x=>x.label),data:w.map(x=>capAt?Math.min(x.sum,capAt):x.sum)};
+}
+function weeklyStudyCalc(filtered){
+  const weeks={};
+  filtered.forEach(e=>{
+    const k=getWeekKey(e.date);
+    if(!weeks[k]) weeks[k]={label:fmtDate(e.date),sum:0};
+    weeks[k].sum+=(studyFilter.hackChinese&&e.hackChinese?1:0)+(studyFilter.duChinese&&e.duChinese?1:0)+(studyFilter.yoyoChinese&&e.yoyoChinese?1:0);
+  });
+  const w=Object.values(weeks); return {labels:w.map(x=>x.label),data:w.map(x=>x.sum)};
+}
+
+// SVG Chart
+function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax){
+  const W=500,H=220,PL=52,PR=16,PT=16,PB=28,iW=W-PL-PR,iH=H-PT-PB;
+  const nums=data.map(v=>{if(v===null||v===undefined||v==='') return null; const n=Number(v); return isNaN(n)?null:n;});
+  const valid=nums.filter(v=>v!==null);
+  if(!valid.length) return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px"><text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#c4a882" font-size="14" font-family="Lato,sans-serif">No data for this period</text></svg>`;
+  const dMin=Math.min(...valid),dMax=Math.max(...valid),aR=(dMax-dMin)||1;
+  const yMin=yAxisMin!==undefined?yAxisMin:dMin-aR*.12;
+  const yMax=yAxisMax!==undefined?yAxisMax:dMax+aR*.12;
+  const yR=yMax-yMin||1;
+  const toX=i=>PL+(i/Math.max(nums.length-1,1))*iW;
+  const toY=v=>PT+iH-((Math.min(Math.max(v,yMin),yMax)-yMin)/yR)*iH;
+  // Avg
+  const avg=avgFmt?avgOf(valid):null;
+  const avgY=avg!==null?toY(avg):null;
+  const avgLbl=avg!==null?'Avg: '+fmtV(avg,avgFmt):null;
+  // Latest
+  let li=-1; for(let i=nums.length-1;i>=0;i--){if(nums[i]!==null){li=i;break;}}
+  const lv=li>=0?nums[li]:null, lx=li>=0?toX(li):null, ly=lv!==null?toY(lv):null;
+  const llbl=lv!==null?fmtV(lv,avgFmt||yAxisFmt||'#,##0'):null;
+  // Y ticks
+  const ticks=[]; for(let i=0;i<=4;i++){const v=yMin+(yR*i/4);const y=PT+iH-(i/4)*iH;ticks.push({y,l:fmtV(v,yAxisFmt||avgFmt||'#,##0')});}
+  // X labels
+  const step=Math.ceil(labels.length/6);
+  const xlbls=labels.map((l,i)=>({l,x:toX(i),show:i%step===0}));
+  // Line
+  let lp='',fp='';
+  const pts=nums.map((v,i)=>v!==null?[toX(i),toY(v)]:null);
+  const segs=[];let cur=[];
+  pts.forEach(p=>{if(p)cur.push(p);else if(cur.length){segs.push(cur);cur=[];}});
+  if(cur.length)segs.push(cur);
+  segs.forEach(seg=>{
+    if(seg.length===1){lp+=`M${seg[0][0]},${seg[0][1]} `;}
+    else{seg.forEach(([x,y],i)=>{lp+=i===0?`M${x},${y}`:`L${x},${y}`;});}
+    if(seg.length>1){fp+=`M${seg[0][0]},${PT+iH} `;seg.forEach(([x,y])=>{fp+=`L${x},${y} `;});fp+=`L${seg[seg.length-1][0]},${PT+iH} Z `;}
+  });
+  // Pill
+  const pW=72,pH=20;
+  let px=lx!==null?lx-pW/2:0;
+  if(px<PL)px=PL; if(px+pW>W-PR)px=W-PR-pW;
+  const py=ly!==null?Math.max(PT+2,ly-26):0;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px" font-family="Lato,sans-serif">
+    ${ticks.map(t=>`<line x1="${PL}" y1="${t.y}" x2="${W-PR}" y2="${t.y}" stroke="#f0e6d8" stroke-width="1"/>`).join('')}
+    ${ticks.map(t=>`<text x="${PL-5}" y="${t.y+4}" text-anchor="end" font-size="11" fill="#c4a882">${t.l}</text>`).join('')}
+    ${xlbls.filter(l=>l.show).map(l=>`<text x="${l.x}" y="${H-6}" text-anchor="middle" font-size="11" fill="#c4a882">${l.l}</text>`).join('')}
+    ${fp?`<path d="${fp}" fill="${color}" fill-opacity="0.1"/>`:''}
+    ${lp?`<path d="${lp}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`:''}
+    ${avgY!==null?`<line x1="${PL}" y1="${avgY}" x2="${W-PR}" y2="${avgY}" stroke="#c49a6c" stroke-width="1.5" stroke-dasharray="6,4"/>
+      <rect x="${PL+iW*.55-36}" y="${avgY-10}" width="72" height="20" rx="4" fill="rgba(253,248,242,.96)" stroke="#c49a6c" stroke-width="1"/>
+      <text x="${PL+iW*.55}" y="${avgY+4}" text-anchor="middle" font-size="11" fill="#8b5e3c" font-weight="700">${avgLbl}</text>`:''}
+    ${lv!==null?`<circle cx="${lx}" cy="${ly}" r="5" fill="${color}" stroke="white" stroke-width="2"/>
+      <rect x="${px}" y="${py}" width="${pW}" height="${pH}" rx="5" fill="${color}" opacity=".92"/>
+      <text x="${px+pW/2}" y="${py+13}" text-anchor="middle" font-size="11" fill="white" font-weight="700">${llbl}</text>`:''}
+  </svg>`;
+}
+
+function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, pills){
+  return `<div class="chart-card">
+    <div class="chart-ttl">${title}</div>
+    ${pills||''}
+    ${makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax)}
+  </div>`;
+}
+
+function renderCharts(){
+  const filtered=getFiltered();
+  let html='';
+  // Bodyweight
+  const bw=weeklyAvgData(filtered,'bodyweight',parseFloat);
+  html+=buildChart('Bodyweight',bw.labels,bw.data,'#8b5e3c','#,##0kg','#,##0kg',58,70);
+  // Steps
+  const st=weeklyAvgData(filtered,'steps',parseInt);
+  html+=buildChart('Daily steps',st.labels,st.data,'#c49a6c','#,##0','#,##0');
+  // Calories
+  const ca=weeklyAvgData(filtered,'calories',parseInt);
+  html+=buildChart('Calories',ca.labels,ca.data,'#a0522d','#,##0','#,##0',1000,3000);
+  // Vitality
+  const vi=weeklySumData(filtered,'vitalityPoints',parseInt,40);
+  html+=buildChart('Vitality points',vi.labels,vi.data,'#7a5c3a','#,##0','#,##0',0,40);
+  // Words
+  const wo=weeklyAvgData(filtered,'hackChineseWords',parseInt);
+  html+=buildChart('Chinese words known',wo.labels,wo.data,'#5c4033',null,'#,##0');
+  // Study pills
+  const pillsHTML=`<div class="study-pills">
+    <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:10px;height:10px;border-radius:50%"/> HackChinese</button>
+    <button class="pill${studyFilter.duChinese?' active':''}" onclick="toggleStudy('duChinese')"><img src="${ICONS_SM.duChinese}" style="width:10px;height:10px;border-radius:50%"/> DuChinese</button>
+    <button class="pill${studyFilter.yoyoChinese?' active':''}" onclick="toggleStudy('yoyoChinese')"><img src="${ICONS_SM.yoyoChinese}" style="width:10px;height:10px;border-radius:50%"/> Yoyo</button>
+  </div>`;
+  const sd=weeklyStudyCalc(filtered);
+  html+=buildChart('Study activity',sd.labels,sd.data,'#8b5e3c','0.0','#,##0',0,7,pillsHTML);
+  document.getElementById('charts-area').innerHTML=html;
+}
+function toggleStudy(key){
+  studyFilter[key]=!studyFilter[key]; renderCharts();
+}
+
+function computeStreak(){
+  let c=0; for(const e of [...entries].sort((a,b)=>b.date.localeCompare(a.date))){ if(isComplete(e))c++; else break; } return c;
+}
+function computeWeek(){
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-7);
+  return entries.filter(e=>e.date>=cutoff.toISOString().split('T')[0]&&isComplete(e)).length;
+}
+function renderDashboard(){
+  const s=computeStreak();
+  document.getElementById('stat-streak').textContent=s===1?'1 day':s+' days';
+  document.getElementById('stat-week').textContent=computeWeek()+'/7';
+  renderCharts();
+}
+
+function renderHistory(){
+  const list=document.getElementById('history-list');
+  if(!entries.length){list.innerHTML='<div class="empty">No entries yet.<br>Start logging to see your history.</div>';return;}
+  list.innerHTML=[...entries].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>{
+    const meta=[e.bodyweight&&parseFloat(e.bodyweight).toFixed(1)+' kg',e.steps&&parseInt(e.steps).toLocaleString()+' steps',e.calories&&parseInt(e.calories).toLocaleString()+' kcal',e.hackChineseWords&&parseInt(e.hackChineseWords).toLocaleString()+' words'].filter(Boolean).join(' · ')||'No metrics logged';
+    const dot=isComplete(e)?'<span class="complete-dot"></span>':'';
+    let icons='';
+    if(e.gym) icons+='<span style="font-size:20px">🏋️</span>';
+    if(e.hackChinese) icons+=`<img class="hist-icon" src="${ICONS.hackChinese}"/>`;
+    if(e.duChinese) icons+=`<img class="hist-icon" src="${ICONS.duChinese}"/>`;
+    if(e.yoyoChinese) icons+=`<img class="hist-icon" src="${ICONS.yoyoChinese}"/>`;
+    return`<div class="hist-row" onclick="loadDate('${e.date}')"><div style="min-width:0;flex:1"><div class="hist-date">${fmtDate(e.date)}${dot}</div><div class="hist-meta">${meta}</div></div><div class="hist-icons">${icons}</div></div>`;
+  }).join('');
+}
+function loadDate(date){ document.getElementById('entry-date').value=date; onDateChange(); switchTab('log'); }
+
+// Init — load from Sheets
+setDot('#c4a882');
+fetch(API+'?action=getAll')
+  .then(r=>r.json())
+  .then(d=>{
+    entries=d.rows||[];
+    const today=entries.find(e=>e.date===todayStr());
+    if(today) fillForm(today); else blankForm(todayStr());
+    setDot('#8b5e3c');
+  })
+  .catch(()=>{ blankForm(todayStr()); setDot('#c0392b'); });
+
+document.getElementById('entry-date').value=todayStr();
+</script>
+</body>
+</html>
