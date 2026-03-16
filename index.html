@@ -290,12 +290,12 @@ const ICONS_SM = { hackChinese: makeIcon('#4a5ae8','H',28), duChinese: makeIcon(
 
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function fmtDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
-function isComplete(e){ return !!(e.steps&&e.bodyweight&&e.calories&&e.sleep&&(e.hackChinese||e.duChinese||e.yoyoChinese)); }
+function isComplete(e){ return !!(e.steps&&e.bodyweight&&e.calories&&e.sleep&&e.hackChinese&&e.duChinese&&e.yoyoChinese); }
 
 function countProgress(){
-  // Fields: supplements, vitality(>0), steps, bodyweight, calories, sleep, chinese(at least one) = 7 total
+  // Fields: supplements, vitality(>0), steps, bodyweight, calories, sleep, hackChinese, duChinese, yoyoChinese = 9 total
   // Gym intentionally excluded — not every day is a gym day
-  let filled = 0, total = 7;
+  let filled = 0, total = 9;
   if(toggles.supplements) filled++;
   if(vit > 0) filled++;
   const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
@@ -304,7 +304,9 @@ function countProgress(){
   if(document.getElementById('calories').value) filled++;
   const sh = document.getElementById('sleep-h').value, sm = document.getElementById('sleep-m').value;
   if(sh && sm) filled++;
-  if(toggles.hackChinese || toggles.duChinese || toggles.yoyoChinese) filled++;
+  if(toggles.hackChinese) filled++;
+  if(toggles.duChinese) filled++;
+  if(toggles.yoyoChinese) filled++;
   return { filled, total };
 }
 
@@ -357,17 +359,25 @@ function fillForm(e){
   document.getElementById('calories').value=e.calories||'';
   document.getElementById('hackChineseWords').value=e.hackChineseWords||'';
   updateProgress();
-  // Sleep — parse "7:36" -> hours "7", minutes "36"
-  if(e.sleep&&e.sleep.includes(':')){
-    const parts=e.sleep.split(':');
-    const hVal=String(parseInt(parts[0]||0));
-    const mVal=String(parseInt(parts[1]||0)).padStart(2,'0');
-    // Set after a tick to ensure options are rendered
+  // Sleep — handle multiple formats from Sheets
+  // Could be "7:30", "07:30", "7:5", "7:05", or empty
+  console.log('sleep raw value:', JSON.stringify(e.sleep));
+  const sleepRaw = e.sleep || '';
+  if(sleepRaw && sleepRaw.includes(':')){
+    const parts = sleepRaw.split(':');
+    const hVal = String(parseInt(parts[0]) || 0);
+    const mVal = String(parseInt(parts[1]) || 0).padStart(2,'0');
+    console.log('sleep parsed -> h:', hVal, 'm:', mVal);
     setTimeout(()=>{
-      document.getElementById('sleep-h').value=hVal;
-      document.getElementById('sleep-m').value=mVal;
+      const hSel = document.getElementById('sleep-h');
+      const mSel = document.getElementById('sleep-m');
+      hSel.value = hVal;
+      mSel.value = mVal;
+      // If value didn't set (no matching option), log it
+      if(hSel.value !== hVal) console.warn('hour option not found:', hVal);
+      if(mSel.value !== mVal) console.warn('minute option not found:', mVal);
       updateProgress();
-    },0);
+    }, 0);
   } else {
     document.getElementById('sleep-h').value='';
     document.getElementById('sleep-m').value='';
