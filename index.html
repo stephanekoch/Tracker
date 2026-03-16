@@ -223,11 +223,34 @@ let vit = 0, pendingSave = null, rangeDays = 7, studyFilter = {hackChinese:true,
 // Favicon
 (function(){
   const c = document.getElementById('fav-canvas'), ctx = c.getContext('2d'), s = 28;
-  ctx.fillStyle = '#8b5e3c';
-  if(ctx.roundRect) ctx.roundRect(0,0,s,s,6); else ctx.rect(0,0,s,s);
+  // Background
+  ctx.fillStyle = '#5c3d1e';
+  if(ctx.roundRect) ctx.roundRect(0,0,s,s,s*0.22); else ctx.rect(0,0,s,s);
   ctx.fill();
-  ctx.strokeStyle='white'; ctx.lineWidth=2.2; ctx.lineJoin='round'; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(1,14); ctx.lineTo(6,14); ctx.lineTo(9,7); ctx.lineTo(12,21); ctx.lineTo(15,10); ctx.lineTo(18,14); ctx.lineTo(27,14); ctx.stroke();
+  // Mountain drawing function with padding
+  const pad = 0.10;
+  const W = 1 - pad*2;
+  const x = (frac) => s * (pad + frac * W);
+  // Layer 3 — furthest
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath();
+  ctx.moveTo(x(0),   s*.82); ctx.lineTo(x(.33), s*.30); ctx.lineTo(x(.62), s*.82);
+  ctx.closePath(); ctx.fill();
+  // Layer 2
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath();
+  ctx.moveTo(x(.16), s*.82); ctx.lineTo(x(.46), s*.26); ctx.lineTo(x(.74), s*.82);
+  ctx.closePath(); ctx.fill();
+  // Layer 1 — front
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(x(.34), s*.82); ctx.lineTo(x(.62), s*.22); ctx.lineTo(x(1.0), s*.82);
+  ctx.closePath(); ctx.fill();
+  // Snow cap
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.moveTo(x(.62), s*.22); ctx.lineTo(x(.53), s*.40); ctx.lineTo(x(.71), s*.40);
+  ctx.closePath(); ctx.fill();
   const link = document.createElement('link'); link.rel='icon'; link.href=c.toDataURL(); document.head.appendChild(link);
   const apple = document.createElement('link'); apple.rel='apple-touch-icon'; apple.href=c.toDataURL(); document.head.appendChild(apple);
 })();
