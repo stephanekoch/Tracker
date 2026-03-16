@@ -283,9 +283,9 @@ const ICONS_SM = { hackChinese: makeIcon('#4a5ae8','H',28), duChinese: makeIcon(
 // Sleep dropdowns
 (function(){
   const h = document.getElementById('sleep-h');
-  for(let i=3;i<=15;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i+'h'; h.appendChild(o); }
+  for(let i=0;i<=23;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i+'h'; h.appendChild(o); }
   const m = document.getElementById('sleep-m');
-  for(let i=0;i<60;i+=5){ const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.textContent=String(i).padStart(2,'0')+'m'; m.appendChild(o); }
+  for(let i=0;i<=59;i++){ const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.textContent=String(i).padStart(2,'0')+'m'; m.appendChild(o); }
 })();
 
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
