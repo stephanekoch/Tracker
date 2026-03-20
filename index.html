@@ -146,7 +146,7 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
         <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/></div>
         <div class="field">
           <div class="field-lbl">Sleep (h:mm)</div>
-          <input type="text" id="sleep-txt" placeholder="7:30" oninput="updateProgress()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Lato',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;"/>
+          <input type="text" id="sleep-txt" placeholder="e.g. 7:30" oninput="updateProgress()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Lato',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;"/>
         </div>
       </div>
       <div class="card">
@@ -576,9 +576,7 @@ function renderCharts(){
     sleepWks[k].sum+=hrs; sleepWks[k].count++;
   });
   const sleepW=Object.values(sleepWks);
-  if(sleepW.length>0){
-    html+=buildChart('Weekly sleep (hrs)',sleepW.map(w=>w.label),sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null),'#6b8c9a','0.0','0.0',4,10);
-  }
+  html+=buildChart('Weekly sleep (hrs)',sleepW.length?sleepW.map(w=>w.label):[''],sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null],'#6b8c9a','0.0','0.0',4,10);
   // Study pills
   const pillsHTML=`<div class="study-pills">
     <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:13px;height:13px;border-radius:50%"/> HackChinese</button>
@@ -677,19 +675,31 @@ function launchConfetti(){
   }
 }
 
-// Init — load from Sheets
-setDot('#c4a882');
-fetch(API+'?action=getAll')
-  .then(r=>r.json())
-  .then(d=>{
-    entries=d.rows||[];
-    const today=entries.find(e=>e.date===todayStr());
-    if(today) fillForm(today); else blankForm(todayStr());
-    setDot('#8b5e3c');
-  })
-  .catch(()=>{ blankForm(todayStr()); setDot('#c0392b'); });
-
+// Init — load from Sheets with retry
 document.getElementById('entry-date').value=todayStr();
+blankForm(todayStr());
+
+function loadData(attempt){
+  attempt = attempt||1;
+  setDot('#c4a882');
+  fetch(API+'?action=getAll', {cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(d=>{
+      entries=d.rows||[];
+      const today=entries.find(e=>e.date===todayStr());
+      if(today) fillForm(today); else blankForm(todayStr());
+      setDot('#8b5e3c');
+    })
+    .catch(err=>{
+      if(attempt<3){
+        setTimeout(()=>loadData(attempt+1), 1500*attempt);
+      } else {
+        setDot('#c0392b');
+        console.warn('Failed to load data after 3 attempts:', err);
+      }
+    });
+}
+loadData();
 </script>
 </body>
 </html>
