@@ -145,12 +145,8 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
         <div class="field"><div class="field-lbl">Bodyweight (kg)</div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()"/></div>
         <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/></div>
         <div class="field">
-          <div class="field-lbl">Sleep</div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <div class="sel-wrap" style="flex:1"><select id="sleep-h"><option value="">Hours</option></select><span class="sel-arr">▾</span></div>
-            <span style="color:var(--muted);font-size:18px;">:</span>
-            <div class="sel-wrap" style="flex:1"><select id="sleep-m"><option value="">Mins</option></select><span class="sel-arr">▾</span></div>
-          </div>
+          <div class="field-lbl">Sleep (h:mm)</div>
+          <input type="text" id="sleep-txt" placeholder="7:30" oninput="updateProgress()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Lato',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;"/>
         </div>
       </div>
       <div class="card">
@@ -185,9 +181,8 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
         <div class="stat-card"><div class="stat-val" id="stat-week">—</div><div class="stat-lbl">Days fully logged<br/><span style="font-size:10px;opacity:.7">this week</span></div></div>
       </div>
       <div class="range-sel">
-        <button class="range-btn active" onclick="setRange(7,this)">Last 7 days</button>
         <button class="range-btn" onclick="setRange(30,this)">1 month</button>
-        <button class="range-btn" onclick="setRange(91,this)">3 months</button>
+        <button class="range-btn active" onclick="setRange(91,this)">3 months</button>
         <button class="range-btn" onclick="setRange(182,this)">6 months</button>
         <button class="range-btn" onclick="setRange(365,this)">12 months</button>
       </div>
@@ -233,7 +228,7 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
 <script>
 const API = '/api/sheets';
 let entries = [], toggles = {gym:false,supplements:false,hackChinese:false,duChinese:false,yoyoChinese:false};
-let vit = 0, pendingSave = null, rangeDays = 7, studyFilter = {hackChinese:true,duChinese:true,yoyoChinese:true}, chartsBuilt = false;
+let vit = 0, pendingSave = null, rangeDays = 91, studyFilter = {hackChinese:true,duChinese:false,yoyoChinese:false}, chartsBuilt = false;
 
 // Favicon
 (function(){
@@ -283,12 +278,7 @@ const ICONS = { hackChinese: makeIcon('#4a5ae8','H'), duChinese: makeIcon('#c039
 const ICONS_SM = { hackChinese: makeIcon('#4a5ae8','H',28), duChinese: makeIcon('#c0392b','D',28), yoyoChinese: makeIcon('#1ab5a0','Y',28) };
 
 // Sleep dropdowns
-(function(){
-  const h = document.getElementById('sleep-h');
-  for(let i=0;i<=23;i++){ const o=document.createElement('option'); o.value=String(i); o.textContent=i+'h'; h.appendChild(o); }
-  const m = document.getElementById('sleep-m');
-  for(let i=0;i<=59;i++){ const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.textContent=String(i).padStart(2,'0')+' min'; m.appendChild(o); }
-})();
+// Sleep is now a plain text input
 
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function fmtDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
@@ -304,8 +294,7 @@ function countProgress(){
   if(stepsRaw) filled++;
   if(document.getElementById('bodyweight').value) filled++;
   if(document.getElementById('calories').value) filled++;
-  const sh = document.getElementById('sleep-h').value, sm = document.getElementById('sleep-m').value;
-  if(sh && sm) filled++;
+  if((document.getElementById('sleep-txt').value||'').trim()) filled++;
   if(toggles.hackChinese) filled++;
   if(toggles.duChinese) filled++;
   if(toggles.yoyoChinese) filled++;
@@ -348,8 +337,7 @@ function setVit(v){ vit=v; [0,3,5,8].forEach(x=>document.getElementById('vit-'+x
 
 function readForm(){
   const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
-  const sh = document.getElementById('sleep-h').value, sm = document.getElementById('sleep-m').value;
-  const sleep = sh&&sm ? sh+':'+sm : '';
+  const sleep = (document.getElementById('sleep-txt').value||'').trim();
   return { date:document.getElementById('entry-date').value, gym:toggles.gym, supplements:toggles.supplements, vitalityPoints:vit,
     steps:stepsRaw, bodyweight:document.getElementById('bodyweight').value, calories:document.getElementById('calories').value,
     sleep, hackChinese:toggles.hackChinese, hackChineseWords:document.getElementById('hackChineseWords').value,
@@ -366,29 +354,8 @@ function fillForm(e){
   document.getElementById('calories').value=e.calories||'';
   document.getElementById('hackChineseWords').value=e.hackChineseWords||'';
   updateProgress();
-  // Sleep — handle multiple formats from Sheets
-  // Could be "7:30", "07:30", "7:5", "7:05", or empty
-  console.log('sleep raw value:', JSON.stringify(e.sleep));
-  const sleepRaw = e.sleep || '';
-  if(sleepRaw && sleepRaw.includes(':')){
-    const parts = sleepRaw.split(':');
-    const hVal = String(parseInt(parts[0]) || 0);
-    const mVal = String(parseInt(parts[1]) || 0).padStart(2,'0');
-    console.log('sleep parsed -> h:', hVal, 'm:', mVal);
-    setTimeout(()=>{
-      const hSel = document.getElementById('sleep-h');
-      const mSel = document.getElementById('sleep-m');
-      hSel.value = hVal;
-      mSel.value = mVal;
-      // If value didn't set (no matching option), log it
-      if(hSel.value !== hVal) console.warn('hour option not found:', hVal);
-      if(mSel.value !== mVal) console.warn('minute option not found:', mVal);
-      updateProgress();
-    }, 0);
-  } else {
-    document.getElementById('sleep-h').value='';
-    document.getElementById('sleep-m').value='';
-  }
+  // Sleep — plain text input
+  document.getElementById('sleep-txt').value = e.sleep || '';
 }
 function blankForm(date){
   fillForm({date,gym:false,supplements:false,vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
@@ -459,6 +426,7 @@ function avgOf(arr){ const v=arr.filter(x=>x!==null&&!isNaN(x)); return v.length
 function fmtV(v,fmt){
   if(v===null||v===undefined) return '';
   if(fmt==='#,##0kg') return Math.round(v).toLocaleString()+'kg';
+  if(fmt==='0.0kg') return Number(v).toFixed(1)+'kg';
   if(fmt==='#,##0') return Math.round(v).toLocaleString();
   if(fmt==='0.0') return Number(v).toFixed(1);
   return String(Math.round(v));
@@ -566,47 +534,57 @@ function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxi
 function renderCharts(){
   const filtered=getFiltered();
   let html='';
-  // Bodyweight
-  const bw=weeklyAvgData(filtered,'bodyweight',parseFloat);
-  html+=buildChart('Bodyweight',bw.labels,bw.data,'#8b5e3c','#,##0kg','#,##0kg',58,70);
-  // Steps
+  // Bodyweight — daily, 1 decimal
+  const bwLabels=filtered.map(e=>fmtDate(e.date));
+  const bwData=filtered.map(e=>e.bodyweight?parseFloat(e.bodyweight):null);
+  html+=buildChart('Bodyweight',bwLabels,bwData,'#8b5e3c','0.0kg','0.0kg',58,70);
+  // Steps — weekly avg
   const st=weeklyAvgData(filtered,'steps',parseInt);
-  html+=buildChart('Daily steps',st.labels,st.data,'#c49a6c','#,##0','#,##0');
-  // Calories
+  html+=buildChart('Weekly steps',st.labels,st.data,'#c49a6c','#,##0','#,##0');
+  // Calories — weekly avg
   const ca=weeklyAvgData(filtered,'calories',parseInt);
-  html+=buildChart('Calories',ca.labels,ca.data,'#a0522d','#,##0','#,##0',1000,3000);
-  // Vitality
+  html+=buildChart('Weekly calories',ca.labels,ca.data,'#a0522d','#,##0','#,##0',1000,3000);
+  // Vitality — weekly sum
   const vi=weeklySumData(filtered,'vitalityPoints',parseInt,40);
-  html+=buildChart('Vitality points',vi.labels,vi.data,'#7a5c3a','#,##0','#,##0',0,40);
-  // Words
+  html+=buildChart('Weekly vitality points',vi.labels,vi.data,'#7a5c3a','#,##0','#,##0',0,40);
+  // Words — weekly avg
   const wo=weeklyAvgData(filtered,'hackChineseWords',parseInt);
-  html+=buildChart('Chinese words known',wo.labels,wo.data,'#5c4033',null,'#,##0');
+  html+=buildChart('Weekly Chinese words known',wo.labels,wo.data,'#5c4033',null,'#,##0');
   // Study pills
   const pillsHTML=`<div class="study-pills">
-    <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:10px;height:10px;border-radius:50%"/> HackChinese</button>
-    <button class="pill${studyFilter.duChinese?' active':''}" onclick="toggleStudy('duChinese')"><img src="${ICONS_SM.duChinese}" style="width:10px;height:10px;border-radius:50%"/> DuChinese</button>
-    <button class="pill${studyFilter.yoyoChinese?' active':''}" onclick="toggleStudy('yoyoChinese')"><img src="${ICONS_SM.yoyoChinese}" style="width:10px;height:10px;border-radius:50%"/> Yoyo</button>
+    <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:13px;height:13px;border-radius:50%"/> HackChinese</button>
+    <button class="pill${studyFilter.duChinese?' active':''}" onclick="toggleStudy('duChinese')"><img src="${ICONS_SM.duChinese}" style="width:13px;height:13px;border-radius:50%"/> DuChinese</button>
+    <button class="pill${studyFilter.yoyoChinese?' active':''}" onclick="toggleStudy('yoyoChinese')"><img src="${ICONS_SM.yoyoChinese}" style="width:13px;height:13px;border-radius:50%"/> Yoyo</button>
   </div>`;
   const sd=weeklyStudyCalc(filtered);
-  html+=buildChart('Study activity',sd.labels,sd.data,'#8b5e3c','0.0','#,##0',0,7,pillsHTML);
+  html+=buildChart('Weekly study activity',sd.labels,sd.data,'#8b5e3c','0.0','#,##0',0,7,pillsHTML);
   document.getElementById('charts-area').innerHTML=html;
 }
 function toggleStudy(key){
-  studyFilter[key]=!studyFilter[key]; renderCharts();
+  // Radio style — select only this one
+  studyFilter={hackChinese:false,duChinese:false,yoyoChinese:false};
+  studyFilter[key]=true;
+  renderCharts();
 }
 
 function computeStreak(){
-  let c=0; for(const e of [...entries].sort((a,b)=>b.date.localeCompare(a.date))){ if(isComplete(e))c++; else break; } return c;
+  const today=todayStr();
+  // Only look at days before today — streak shouldn't reset mid-day
+  const past=[...entries].filter(e=>e.date<today).sort((a,b)=>b.date.localeCompare(a.date));
+  let c=0;
+  for(const e of past){ if(isComplete(e))c++; else break; }
+  return c;
 }
 function computeWeek(){
-  // Current week Mon-Sun
+  // Current week Mon-Sun, exclude today
+  const today=todayStr();
   const now=new Date();
-  const day=now.getDay(); // 0=Sun
+  const day=now.getDay();
   const monday=new Date(now);
   monday.setDate(now.getDate()-(day===0?6:day-1));
   monday.setHours(0,0,0,0);
   const monStr=monday.toISOString().split('T')[0];
-  return entries.filter(e=>e.date>=monStr&&isComplete(e)).length;
+  return entries.filter(e=>e.date>=monStr&&e.date<today&&isComplete(e)).length;
 }
 function renderDashboard(){
   const s=computeStreak();
