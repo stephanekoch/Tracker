@@ -354,9 +354,16 @@ function fillForm(e){
   document.getElementById('calories').value=e.calories||'';
   document.getElementById('hackChineseWords').value=e.hackChineseWords||'';
   updateProgress();
-  // Sleep — plain text input, strip any NaN artefacts from old dropdown
-  const sleepClean = (e.sleep||'').replace(/[^0-9:]/g,'').replace(/^:+|:+$/g,'');
-  document.getElementById('sleep-txt').value = (sleepClean && sleepClean.includes(':') && !sleepClean.endsWith(':')) ? sleepClean : '';
+  // Sleep — plain text input, strip NaN artefacts
+  const rawSleep = e.sleep||'';
+  let sleepVal = '';
+  if(rawSleep.includes(':') && !rawSleep.includes('NaN')){
+    const sp=rawSleep.split(':');
+    const sh=parseInt(sp[0]);
+    const sm=parseInt(sp[1]);
+    if(!isNaN(sh)&&!isNaN(sm)) sleepVal=sh+':'+(sm<10?'0'+sm:String(sm));
+  }
+  document.getElementById('sleep-txt').value = sleepVal;
 }
 function blankForm(date){
   fillForm({date,gym:false,supplements:false,vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
@@ -555,6 +562,23 @@ function renderCharts(){
   // Words — weekly avg
   const wo=weeklyAvgData(filtered,'hackChineseWords',parseInt);
   html+=buildChart('Weekly Chinese words known',wo.labels,wo.data,'#5c4033',null,'#,##0');
+  // Sleep — weekly average
+  const sleepEntries=filtered.filter(e=>{
+    if(!e.sleep||!e.sleep.includes(':')) return false;
+    const sp=e.sleep.split(':'); const h=parseInt(sp[0]); const m=parseInt(sp[1]);
+    return !isNaN(h)&&!isNaN(m)&&e.sleep.indexOf('NaN')===-1;
+  });
+  const sleepWks={};
+  sleepEntries.forEach(e=>{
+    const sp=e.sleep.split(':'); const hrs=parseInt(sp[0])+(parseInt(sp[1])/60);
+    const k=getWeekKey(e.date);
+    if(!sleepWks[k]) sleepWks[k]={label:fmtDate(e.date),sum:0,count:0};
+    sleepWks[k].sum+=hrs; sleepWks[k].count++;
+  });
+  const sleepW=Object.values(sleepWks);
+  if(sleepW.length>0){
+    html+=buildChart('Weekly sleep (hrs)',sleepW.map(w=>w.label),sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null),'#6b8c9a','0.0','0.0',4,10);
+  }
   // Study pills
   const pillsHTML=`<div class="study-pills">
     <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:13px;height:13px;border-radius:50%"/> HackChinese</button>
@@ -574,14 +598,26 @@ function toggleStudy(key){
 
 function computeStreak(){
   const today=todayStr();
-  // Only look at days before today — streak shouldn't reset mid-day
-  const past=[...entries].filter(e=>e.date<today).sort((a,b)=>b.date.localeCompare(a.date));
-  let c=0;
-  for(const e of past){ if(isComplete(e))c++; else break; }
+  const sorted=[...entries].sort((a,b)=>b.date.localeCompare(a.date));
+  const todayComplete=!!entries.find(e=>e.date===today&&isComplete(e));
+  let c=0, started=false;
+  for(const e of sorted){
+    if(e.date>today) continue;
+    if(!started){
+      if(e.date===today&&!todayComplete) continue;
+      started=true;
+    }
+    if(isComplete(e)) c++; else break;
+  }
+  return c;
+}
+    else if(!counting&&e.date<today){counting=true;}
+    if(counting){if(isComplete(e))c++;else break;}
+  }
   return c;
 }
 function computeWeek(){
-  // Current week Mon-Sun, exclude today
+  // Current week Mon-Sun, include today if complete
   const today=todayStr();
   const now=new Date();
   const day=now.getDay();
@@ -589,7 +625,7 @@ function computeWeek(){
   monday.setDate(now.getDate()-(day===0?6:day-1));
   monday.setHours(0,0,0,0);
   const monStr=monday.toISOString().split('T')[0];
-  return entries.filter(e=>e.date>=monStr&&e.date<today&&isComplete(e)).length;
+  return entries.filter(e=>e.date>=monStr&&e.date<=today&&isComplete(e)).length;
 }
 function renderDashboard(){
   const s=computeStreak();
