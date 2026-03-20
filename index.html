@@ -611,11 +611,6 @@ function computeStreak(){
   }
   return c;
 }
-    else if(!counting&&e.date<today){counting=true;}
-    if(counting){if(isComplete(e))c++;else break;}
-  }
-  return c;
-}
 function computeWeek(){
   // Current week Mon-Sun, include today if complete
   const today=todayStr();
