@@ -354,8 +354,9 @@ function fillForm(e){
   document.getElementById('calories').value=e.calories||'';
   document.getElementById('hackChineseWords').value=e.hackChineseWords||'';
   updateProgress();
-  // Sleep — plain text input
-  document.getElementById('sleep-txt').value = e.sleep || '';
+  // Sleep — plain text input, strip any NaN artefacts from old dropdown
+  const sleepClean = (e.sleep||'').replace(/[^0-9:]/g,'').replace(/^:+|:+$/g,'');
+  document.getElementById('sleep-txt').value = (sleepClean && sleepClean.includes(':') && !sleepClean.endsWith(':')) ? sleepClean : '';
 }
 function blankForm(date){
   fillForm({date,gym:false,supplements:false,vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
@@ -413,10 +414,14 @@ function setRange(days,el){
 
 // Data helpers
 function getWeekKey(dateStr){
+  // Proper ISO 8601 week: week starts Monday, first week contains Jan 4
   const d=new Date(dateStr+'T00:00:00');
-  const jan4=new Date(d.getFullYear(),0,4);
-  const wn=Math.ceil(((d-jan4)/86400000+jan4.getDay()+1)/7);
-  return d.getFullYear()+'-W'+String(wn).padStart(2,'0');
+  const day=d.getDay()||7; // Mon=1 ... Sun=7
+  d.setDate(d.getDate()+4-day); // shift to Thursday of this week
+  const yearStart=new Date(d.getFullYear(),0,1);
+  const wn=Math.ceil(((d-yearStart)/86400000+1)/7);
+  const origDate=new Date(dateStr+'T00:00:00');
+  return origDate.getFullYear()+'-W'+String(wn).padStart(2,'0');
 }
 function getFiltered(){
   const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-rangeDays);
