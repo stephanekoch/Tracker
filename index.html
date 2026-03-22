@@ -587,19 +587,19 @@ function renderCharts(){
     if(e.gym) gymWks[k].sum++;
   });
   const gymW=Object.values(gymWks);
-  html+=buildChart('Weekly gym sessions',gymW.map(w=>w.label),gymW.map(w=>w.sum),'#8b5e3c','0.0','0.0',0,7);
+  html+=buildChart('Weekly gym sessions',gymW.map(w=>w.label),gymW.map(w=>w.sum),'#8b5e3c','0.0','0.0',0,4);
   // Steps — weekly avg
   const st=weeklyAvgData(filtered,'steps',parseInt);
-  html+=buildChart('Weekly steps',st.labels,st.data,'#c49a6c','#,##0','#,##0');
+  html+=buildChart('Weekly steps',st.labels,st.data,'#8b5e3c','#,##0','#,##0');
   // Calories — weekly avg
   const ca=weeklyAvgData(filtered,'calories',parseInt);
-  html+=buildChart('Weekly calories',ca.labels,ca.data,'#a0522d','#,##0','#,##0',1000,3000);
+  html+=buildChart('Weekly calories',ca.labels,ca.data,'#8b5e3c','#,##0','#,##0',1000,3000);
   // Vitality — weekly sum
   const vi=weeklySumData(filtered,'vitalityPoints',parseInt,40);
-  html+=buildChart('Weekly vitality points',vi.labels,vi.data,'#7a5c3a','#,##0','#,##0',0,40);
+  html+=buildChart('Weekly vitality points',vi.labels,vi.data,'#8b5e3c','#,##0','#,##0',12,40);
   // Words — weekly avg
   const wo=weeklyAvgData(filtered,'hackChineseWords',parseInt);
-  html+=buildChart('Weekly Chinese words known',wo.labels,wo.data,'#5c4033',null,'#,##0');
+  html+=buildChart('Weekly Chinese words known',wo.labels,wo.data,'#8b5e3c',null,'#,##0');
   // Sleep — weekly average
   const sleepEntries=filtered.filter(e=>{
     if(!e.sleep||!e.sleep.includes(':')) return false;
@@ -614,7 +614,7 @@ function renderCharts(){
     sleepWks[k].sum+=hrs; sleepWks[k].count++;
   });
   const sleepW=Object.values(sleepWks);
-  html+=buildChart('Weekly sleep',sleepW.length?sleepW.map(w=>w.label):[''],sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null],'#a0522d','sleep','sleep',4,10);
+  html+=buildChart('Weekly sleep',sleepW.length?sleepW.map(w=>w.label):[''],sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null],'#8b5e3c','sleep','sleep',5,9);
   // Study pills
   const pillsHTML=`<div class="study-pills">
     <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:13px;height:13px;border-radius:50%"/> HackChinese</button>
