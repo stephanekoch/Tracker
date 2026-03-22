@@ -120,7 +120,7 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
   <div class="content" id="content">
 
     <!-- LOG -->
-    <div id="tab-log">
+    <div id="tab-log" class="hidden">
       <div class="card date-row">
         <span class="date-lbl">Date</span>
         <input type="date" id="entry-date" onchange="onDateChange()"/>
@@ -175,7 +175,7 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
     </div>
 
     <!-- DASHBOARD -->
-    <div id="tab-dashboard" class="hidden">
+    <div id="tab-dashboard">
       <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;">
         <div class="stat-card"><div class="stat-val" id="stat-streak">—</div><div class="stat-lbl">Logged streak</div></div>
         <div class="stat-card"><div class="stat-val" id="stat-week">—</div><div class="stat-lbl">This week<br/><span style="font-size:10px;opacity:.7">days logged</span></div></div>
@@ -202,13 +202,13 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
 
   <!-- Bottom Nav -->
   <div class="bottom-nav">
-    <button class="nav-btn active" id="nav-log" onclick="switchTab('log')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5e3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span>Log</span>
-    </button>
-    <button class="nav-btn" id="nav-dashboard" onclick="switchTab('dashboard')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c4a882" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    <button class="nav-btn active" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5e3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       <span>Dashboard</span>
+    </button>
+    <button class="nav-btn" id="nav-log" onclick="switchTab('log')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c4a882" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Log</span>
     </button>
     <button class="nav-btn" id="nav-history" onclick="switchTab('history')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c4a882" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -432,7 +432,7 @@ function showToast(){
 
 // Tabs
 function switchTab(name){
-  ['log','dashboard','history'].forEach(t=>{
+  ['dashboard','log','history'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('hidden',t!==name);
     const nb=document.getElementById('nav-'+t);
     nb.classList.toggle('active',t===name);
@@ -797,6 +797,7 @@ function loadData(attempt){
       const today=entries.find(e=>e.date===todayStr());
       if(today) fillForm(today); else blankForm(todayStr());
       setDot('#8b5e3c');
+      renderDashboard();
     })
     .catch(err=>{
       if(attempt<3){
