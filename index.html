@@ -179,7 +179,11 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
       <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;">
         <div class="stat-card"><div class="stat-val" id="stat-streak">—</div><div class="stat-lbl">Logged streak</div></div>
         <div class="stat-card"><div class="stat-val" id="stat-week">—</div><div class="stat-lbl">This week<br/><span style="font-size:10px;opacity:.7">days logged</span></div></div>
-        <div class="stat-card"><div class="stat-val" id="stat-perfect">—</div><div class="stat-lbl">Perfect weeks<br/><span style="font-size:10px;opacity:.7">this year</span></div></div>
+        <div class="stat-card" style="position:relative;">
+          <button onclick="document.getElementById('perfect-modal').classList.remove('hidden')" style="position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:50%;border:1.5px solid #c4a882;background:transparent;color:#c4a882;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">?</button>
+          <div class="stat-val" id="stat-perfect">—</div>
+          <div class="stat-lbl">Perfect weeks<br/><span style="font-size:10px;opacity:.7">this year</span></div>
+        </div>
       </div>
       <div class="range-sel">
         <button class="range-btn" onclick="setRange(30,this)">1 month</button>
@@ -224,6 +228,24 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
     </div>
   </div>
   <div class="toast hidden" id="toast"><div class="toast-inner">✓ Entry saved!</div></div>
+
+  <div class="overlay hidden" id="perfect-modal">
+    <div class="modal">
+      <h3>Perfect week 🏔️</h3>
+      <p>A perfect week requires all of the following:</p>
+      <ul style="margin:0 0 16px 0;padding-left:18px;font-size:13px;color:#7a5c3a;line-height:2;font-family:'Lato',sans-serif;">
+        <li>At least <strong>3 gym sessions</strong></li>
+        <li><strong>40 vitality points</strong> total</li>
+        <li>Average <strong>10,000+ steps</strong> per day</li>
+        <li><strong>7 HackChinese</strong> sessions</li>
+        <li><strong>7 DuChinese</strong> sessions</li>
+        <li><strong>7 Yoyo Chinese</strong> sessions</li>
+      </ul>
+      <div class="modal-btns">
+        <button class="btn-pri" onclick="document.getElementById('perfect-modal').classList.add('hidden')">Got it</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -446,6 +468,7 @@ function fmtV(v,fmt){
   if(fmt==='#,##0kg') return Math.round(v).toLocaleString()+'kg';
   if(fmt==='0.0kg') return Number(v).toFixed(1)+'kg';
   if(fmt==='#,##0') return Math.round(v).toLocaleString();
+  if(fmt==='sleep'){const h=Math.floor(v);const m=Math.round((v-h)*60);return h+"'"+String(m).padStart(2,'0')+"''";}
   if(fmt==='0.0') return Number(v).toFixed(1);
   return String(Math.round(v));
 }
@@ -591,7 +614,7 @@ function renderCharts(){
     sleepWks[k].sum+=hrs; sleepWks[k].count++;
   });
   const sleepW=Object.values(sleepWks);
-  html+=buildChart('Weekly sleep (hrs)',sleepW.length?sleepW.map(w=>w.label):[''],sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null],'#6b8c9a','0.0','0.0',4,10);
+  html+=buildChart('Weekly sleep',sleepW.length?sleepW.map(w=>w.label):[''],sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null],'#a0522d','sleep','sleep',4,10);
   // Study pills
   const pillsHTML=`<div class="study-pills">
     <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:13px;height:13px;border-radius:50%"/> HackChinese</button>
@@ -721,9 +744,8 @@ function renderHistory(){
     if(e.hackChinese) chineseIcons+=`<img style="width:20px;height:20px;border-radius:50%" src="${ICONS.hackChinese}"/>`;
     if(e.duChinese) chineseIcons+=`<img style="width:20px;height:20px;border-radius:50%" src="${ICONS.duChinese}"/>`;
     if(e.yoyoChinese) chineseIcons+=`<img style="width:20px;height:20px;border-radius:50%" src="${ICONS.yoyoChinese}"/>`;
-    const iconsCol='<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;margin-left:8px">'
-      +(healthIcons?'<div style="display:flex;gap:3px;align-items:center">'+healthIcons+'</div>':'')
-      +(chineseIcons?'<div style="display:flex;gap:3px;align-items:center">'+chineseIcons+'</div>':'')
+    const iconsCol='<div style="display:flex;flex-direction:row;gap:4px;align-items:center;flex-shrink:0;margin-left:8px">'
+      +healthIcons+chineseIcons
       +'</div>';
     return`<div class="${rowClass}" onclick="loadDate('${e.date}')"><div style="min-width:0;flex:1"><div class="hist-date">${fmtDate(e.date)}${badge}</div><div class="hist-meta">${meta}</div></div>${iconsCol}</div>`;
   }).join('');
