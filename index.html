@@ -56,7 +56,7 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
 .save-btn.error{background:#c0392b;}
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
-.stat-val{font-family:'Playfair Display',serif;font-size:28px;color:var(--accent);font-weight:700;line-height:1;}
+.stat-val{font-family:'Playfair Display',serif;font-size:22px;color:var(--accent);font-weight:700;line-height:1;}
 .stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:5px;line-height:1.4;}
 .range-sel{display:flex;gap:4px;margin-bottom:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;}
 .range-btn{flex:1;padding:8px 2px;border:none;border-radius:7px;background:transparent;font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;color:var(--muted);white-space:nowrap;text-align:center;}
@@ -87,12 +87,7 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
 .hidden{display:none!important;}
 .confetti-piece{position:fixed;width:10px;height:10px;top:-10px;opacity:0;pointer-events:none;z-index:999;border-radius:2px;animation:confetti-fall linear forwards;}
 @keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(110vh) rotate(720deg);opacity:0;}}
-.progress-wrap{margin-bottom:8px;}
-.progress-lbl{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
-.progress-lbl span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
-.progress-lbl strong{font-size:10px;color:var(--accent);font-weight:700;}
-.progress-track{background:var(--border);border-radius:4px;height:5px;overflow:hidden;}
-.progress-fill{height:100%;border-radius:4px;transition:width .3s,background .3s;}
+
 .hist-badge{display:inline-flex;width:16px;height:16px;border-radius:50%;background:#5a8a5a;color:white;font-size:9px;align-items:center;justify-content:center;vertical-align:middle;margin-left:5px;flex-shrink:0;}
 .hist-row.complete{opacity:1;}
 .hist-row.partial{opacity:0.6;}
@@ -108,7 +103,16 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
         <div class="app-title">Tracker</div>
         <div class="app-sub">Health & Chinese</div>
       </div>
-      <div class="dot" id="status-dot" style="margin-left:auto;"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+        <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
+          <circle cx="20" cy="20" r="16" fill="none" stroke="#e8ddd0" stroke-width="3.5"/>
+          <circle id="ring-fill" cx="20" cy="20" r="16" fill="none" stroke="#8b5e3c" stroke-width="3.5"
+            stroke-dasharray="100.5" stroke-dashoffset="100.5"
+            stroke-linecap="round" transform="rotate(-90 20 20)" style="transition:stroke-dashoffset .4s,stroke .4s;"/>
+          <text id="ring-text" x="20" y="24" text-anchor="middle" font-size="11" fill="#8b5e3c" font-weight="700" font-family="Lato,sans-serif">0/9</text>
+        </svg>
+        <div class="dot" id="status-dot"></div>
+      </div>
     </div>
   </div>
 
@@ -167,18 +171,15 @@ input[type=date]{border:none;background:transparent;font-family:'Lato',sans-seri
           <div><div class="tgl-lbl">Yoyo Chinese</div><div class="tgl-sub">Video lessons</div></div>
         </div>
       </div>
-      <div class="progress-wrap" id="progress-wrap">
-        <div class="progress-lbl"><span>Today's progress</span><strong id="progress-lbl-text">0 / 9</strong></div>
-        <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%;background:var(--accent);"></div></div>
-      </div>
       <button class="save-btn" id="save-btn" onclick="handleSave()">Save to Sheet</button>
     </div>
 
     <!-- DASHBOARD -->
     <div id="tab-dashboard" class="hidden">
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-val" id="stat-streak">—</div><div class="stat-lbl">Days fully logged streak</div></div>
-        <div class="stat-card"><div class="stat-val" id="stat-week">—</div><div class="stat-lbl">Days fully logged<br/><span style="font-size:10px;opacity:.7">this week</span></div></div>
+      <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="stat-card"><div class="stat-val" id="stat-streak">—</div><div class="stat-lbl">Logged streak</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-week">—</div><div class="stat-lbl">This week<br/><span style="font-size:10px;opacity:.7">days logged</span></div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-perfect">—</div><div class="stat-lbl">Perfect weeks<br/><span style="font-size:10px;opacity:.7">this year</span></div></div>
       </div>
       <div class="range-sel">
         <button class="range-btn" onclick="setRange(30,this)">1 month</button>
@@ -304,15 +305,20 @@ function countProgress(){
 let _wasComplete = false;
 function updateProgress(){
   const {filled, total} = countProgress();
-  const pct = Math.round(filled/total*100);
-  const fill = document.getElementById('progress-fill');
-  const lbl = document.getElementById('progress-lbl-text');
-  if(!fill || !lbl) return;
-  fill.style.width = pct + '%';
   const complete = filled === total;
-  fill.style.background = complete ? '#5a8a5a' : 'var(--accent)';
-  lbl.textContent = filled + ' / ' + total;
-  lbl.style.color = complete ? '#5a8a5a' : 'var(--accent)';
+  // Update ring
+  const circumference = 100.5; // 2*PI*16
+  const offset = circumference - (filled/total)*circumference;
+  const ringFill = document.getElementById('ring-fill');
+  const ringText = document.getElementById('ring-text');
+  if(ringFill){
+    ringFill.style.strokeDashoffset = offset;
+    ringFill.style.stroke = complete ? '#5a8a5a' : '#8b5e3c';
+  }
+  if(ringText){
+    ringText.textContent = filled+'/'+total;
+    ringText.style.fill = complete ? '#5a8a5a' : '#8b5e3c';
+  }
   // Fire confetti only once when first reaching complete
   if(complete && !_wasComplete) launchConfetti();
   _wasComplete = complete;
@@ -550,6 +556,15 @@ function renderCharts(){
   const bwLabels=filtered.map(e=>fmtDate(e.date));
   const bwData=filtered.map(e=>e.bodyweight?parseFloat(e.bodyweight):null);
   html+=buildChart('Bodyweight',bwLabels,bwData,'#8b5e3c','0.0kg','0.0kg',58,70);
+  // Gym sessions — weekly sum
+  const gymWks={};
+  filtered.forEach(e=>{
+    const k=getWeekKey(e.date);
+    if(!gymWks[k]) gymWks[k]={label:fmtDate(e.date),sum:0};
+    if(e.gym) gymWks[k].sum++;
+  });
+  const gymW=Object.values(gymWks);
+  html+=buildChart('Weekly gym sessions',gymW.map(w=>w.label),gymW.map(w=>w.sum),'#8b5e3c','0.0','0.0',0,7);
   // Steps — weekly avg
   const st=weeklyAvgData(filtered,'steps',parseInt);
   html+=buildChart('Weekly steps',st.labels,st.data,'#c49a6c','#,##0','#,##0');
@@ -620,10 +635,60 @@ function computeWeek(){
   const monStr=monday.toISOString().split('T')[0];
   return entries.filter(e=>e.date>=monStr&&e.date<=today&&isComplete(e)).length;
 }
+function sleepToHours(s){
+  if(!s||!s.includes(':')||s.indexOf('NaN')!==-1) return null;
+  const p=s.split(':'); const h=parseInt(p[0]); const m=parseInt(p[1]);
+  if(isNaN(h)||isNaN(m)) return null;
+  return h+m/60;
+}
+
+function computePerfectWeeks(){
+  // Group all entries by ISO week
+  const weeks={};
+  entries.forEach(e=>{
+    const k=getWeekKey(e.date);
+    if(!weeks[k]) weeks[k]=[];
+    weeks[k].push(e);
+  });
+  // Only count weeks from start of current year
+  const year=new Date().getFullYear();
+  let perfect=0, total=0;
+  // Count completed weeks only (not current week)
+  const currentWeek=getWeekKey(todayStr());
+  Object.entries(weeks).forEach(([wk, days])=>{
+    if(!wk.startsWith(year)||wk===currentWeek) return;
+    total++;
+    // 1) At least 3 gym sessions
+    const gymSessions=days.filter(e=>e.gym).length;
+    if(gymSessions<3) return;
+    // 2) Total vitality points >= 40
+    const totalVit=days.reduce((a,e)=>a+(parseInt(e.vitalityPoints)||0),0);
+    if(totalVit<40) return;
+    // 3) Average steps >= 10,000
+    const stepsVals=days.map(e=>parseInt(e.steps)||0).filter(v=>v>0);
+    if(!stepsVals.length) return;
+    const avgSteps=stepsVals.reduce((a,b)=>a+b,0)/stepsVals.length;
+    if(avgSteps<10000) return;
+    // 4) 7 sessions each of HackChinese, DuChinese, YoYo
+    const hack=days.filter(e=>e.hackChinese).length;
+    const du=days.filter(e=>e.duChinese).length;
+    const yoyo=days.filter(e=>e.yoyoChinese).length;
+    if(hack<7||du<7||yoyo<7) return;
+    perfect++;
+  });
+  // Total weeks in year so far (excluding current)
+  const now=new Date();
+  const startOfYear=new Date(year,0,1);
+  const weeksSoFar=Math.floor((now-startOfYear)/(7*86400000));
+  return {perfect, total: Math.max(weeksSoFar,total)};
+}
+
 function renderDashboard(){
   const s=computeStreak();
   document.getElementById('stat-streak').textContent=s===1?'1 day':s+' days';
   document.getElementById('stat-week').textContent=computeWeek()+'/7';
+  const pw=computePerfectWeeks();
+  document.getElementById('stat-perfect').textContent=pw.perfect+'/'+pw.total;
   renderCharts();
 }
 
@@ -638,15 +703,29 @@ function renderHistory(){
   const recent=[...entries].filter(e=>e.date>=cutStr).sort((a,b)=>b.date.localeCompare(a.date));
   if(!recent.length){list.innerHTML='<div class="empty">No entries in the last 14 days.</div>';return;}
   list.innerHTML=recent.map(e=>{
-    const meta=[e.bodyweight&&parseFloat(e.bodyweight).toFixed(1)+' kg',e.steps&&parseInt(e.steps).toLocaleString()+' steps',e.calories&&parseInt(e.calories).toLocaleString()+' kcal',e.hackChineseWords&&parseInt(e.hackChineseWords).toLocaleString()+' words'].filter(Boolean).join(' · ')||'No metrics logged';
+    const bw=e.bodyweight?parseFloat(e.bodyweight).toFixed(1)+' kg':'';
+    const stps=e.steps?parseInt(e.steps).toLocaleString()+' steps':'';
+    const kcal=e.calories?parseInt(e.calories).toLocaleString()+' kcal':'';
+    const slp=(e.sleep&&e.sleep.includes(':')&&e.sleep.indexOf('NaN')===-1)?e.sleep:'';
+    const metaParts=[bw,stps,kcal,slp].filter(Boolean);
+    const meta=metaParts.join(' · ')||'No metrics logged';
     const badge=isComplete(e)?'<span class="hist-badge">✓</span>':'';
     const rowClass=isComplete(e)?'hist-row complete':'hist-row partial';
-    let icons='';
-    if(e.gym) icons+='<span style="font-size:20px">🏋️</span>';
-    if(e.hackChinese) icons+=`<img class="hist-icon" src="${ICONS.hackChinese}"/>`;
-    if(e.duChinese) icons+=`<img class="hist-icon" src="${ICONS.duChinese}"/>`;
-    if(e.yoyoChinese) icons+=`<img class="hist-icon" src="${ICONS.yoyoChinese}"/>`;
-    return`<div class="${rowClass}" onclick="loadDate('${e.date}')"><div style="min-width:0;flex:1"><div class="hist-date">${fmtDate(e.date)}${badge}</div><div class="hist-meta">${meta}</div></div><div class="hist-icons">${icons}</div></div>`;
+    // Health row: gym + supplements + vitality
+    let healthIcons='';
+    if(e.gym) healthIcons+='<span style="font-size:17px;line-height:1">🏋️</span>';
+    if(e.supplements) healthIcons+='<span style="display:inline-flex;width:20px;height:20px;border-radius:10px;background:#8b5e3c;color:white;font-size:12px;align-items:center;justify-content:center;">💊</span>';
+    if(e.vitalityPoints>0) healthIcons+='<span style="display:inline-flex;min-width:20px;height:20px;padding:0 3px;border-radius:50%;background:white;border:1.5px solid #e8ddd0;color:#c0392b;font-size:11px;align-items:center;justify-content:center;font-weight:700">'+e.vitalityPoints+'</span>';
+    // Chinese row
+    let chineseIcons='';
+    if(e.hackChinese) chineseIcons+=`<img style="width:20px;height:20px;border-radius:50%" src="${ICONS.hackChinese}"/>`;
+    if(e.duChinese) chineseIcons+=`<img style="width:20px;height:20px;border-radius:50%" src="${ICONS.duChinese}"/>`;
+    if(e.yoyoChinese) chineseIcons+=`<img style="width:20px;height:20px;border-radius:50%" src="${ICONS.yoyoChinese}"/>`;
+    const iconsCol='<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;margin-left:8px">'
+      +(healthIcons?'<div style="display:flex;gap:3px;align-items:center">'+healthIcons+'</div>':'')
+      +(chineseIcons?'<div style="display:flex;gap:3px;align-items:center">'+chineseIcons+'</div>':'')
+      +'</div>';
+    return`<div class="${rowClass}" onclick="loadDate('${e.date}')"><div style="min-width:0;flex:1"><div class="hist-date">${fmtDate(e.date)}${badge}</div><div class="hist-meta">${meta}</div></div>${iconsCol}</div>`;
   }).join('');
 }
 function loadDate(date){ document.getElementById('entry-date').value=date; onDateChange(); switchTab('log'); }
