@@ -438,6 +438,13 @@ function switchTab(name){
     nb.classList.toggle('active',t===name);
     nb.querySelector('svg').setAttribute('stroke',t===name?'#8b5e3c':'#c4a882');
   });
+  // When leaving Log tab, reset form and ring to today
+  if(name!=='log'){
+    const today=todayStr();
+    const todayEntry=entries.find(e=>e.date===today);
+    if(todayEntry) fillForm(todayEntry); else blankForm(today);
+    document.getElementById('entry-date').value=today;
+  }
   if(name==='dashboard') renderDashboard();
   if(name==='history') renderHistory();
 }
