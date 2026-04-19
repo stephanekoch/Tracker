@@ -639,7 +639,7 @@ function computeStreak(){
   return c;
 }
 function computeWeek(){
-  // Current week Mon-Sun, include today if complete
+  // Current week Mon-Sun, include today if complete, cap at 7
   const today=todayStr();
   const now=new Date();
   const day=now.getDay();
@@ -647,7 +647,8 @@ function computeWeek(){
   monday.setDate(now.getDate()-(day===0?6:day-1));
   monday.setHours(0,0,0,0);
   const monStr=monday.toISOString().split('T')[0];
-  return entries.filter(e=>e.date>=monStr&&e.date<=today&&isComplete(e)).length;
+  const count=entries.filter(e=>e.date>=monStr&&e.date<=today&&isComplete(e)).length;
+  return Math.min(count,7);
 }
 function sleepToHours(s){
   if(!s||!s.includes(':')||s.indexOf('NaN')!==-1) return null;
