@@ -99,8 +99,10 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .goal-summary .gs-status{font-size:12px;font-weight:600;}
 .goal-summary .gs-detail{font-size:12px;color:var(--text2);line-height:1.6;}
 .goal-warn{background:#fff8e6;border:1px solid #ffe0a3;border-radius:9px;padding:9px 11px;font-size:12px;color:#8a6100;line-height:1.5;margin-top:10px;}
-.target-hint{font-size:12px;color:var(--accent);font-weight:600;margin-top:5px;}
-.target-hint span{color:var(--text2);font-weight:400;}
+.target-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#f5f5f5;border:1px solid #ececec;border-radius:9px;padding:4px 13px;flex-shrink:0;line-height:1.15;}
+.target-pill b{font-size:16px;font-weight:600;color:var(--accent);}
+.target-pill i{font-size:9px;font-style:normal;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;}
 .rate-row{display:flex;gap:7px;}
 .rate-btn{flex:1;padding:10px 4px;border-radius:9px;border:1px solid var(--border);background:#fff;color:var(--muted);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;line-height:1.35;}
 .rate-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
@@ -126,7 +128,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v43</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v44</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
         <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
@@ -171,7 +173,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           </div>
         </div>
         <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this);updateProgress()"/></div>
-        <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()"/><div id="bw-target-hint"></div></div>
+        <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><div style="display:flex;gap:8px;align-items:stretch;"><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()" style="flex:1;min-width:0;"/><div id="bw-target-hint"></div></div></div>
         <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/><div id="cal-target-hint"></div></div>
         <div class="field">
           <div class="field-lbl">Sleep (h:mm)</div>
@@ -587,11 +589,11 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
     if(seg.length>1){fp+='M'+seg[0][0]+','+(PT+iH)+' ';seg.forEach(([x,y])=>{fp+='L'+x+','+y+' ';});fp+='L'+seg[seg.length-1][0]+','+(PT+iH)+' Z ';}
   });
   // Target curve path
-  let tp='';
+  let tp='', tgtEnd=null;
   if(tgt){
     const tpts=tgt.map((v,i)=>(v===null||v===undefined||isNaN(v))?null:[toX(i),toY(v)]);
     let started=false;
-    tpts.forEach(p=>{ if(!p) return; tp += (started?'L':'M')+p[0]+','+p[1]; started=true; });
+    tpts.forEach(p=>{ if(!p) return; tp += (started?'L':'M')+p[0]+','+p[1]; started=true; tgtEnd=p; });
   }
   // Latest pill positioning
   const pW=80,pH=24;
@@ -609,14 +611,18 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
     +xlbls.filter(l=>l.show).map(l=>'<text x="'+l.x+'" y="'+(H-8)+'" text-anchor="middle" font-size="13" fill="#bbbbbb">'+l.l+'</text>').join('')
     // Fill area
     +(fp?'<path d="'+fp+'" fill="'+color+'" fill-opacity="0.1"/>':'')
-    // "Today" divider — everything right of it is projection, not history
-    +(opts.todayIndex!==undefined && opts.todayIndex>=0 && opts.todayIndex<nums.length
-      ? '<line x1="'+toX(opts.todayIndex)+'" y1="'+PT+'" x2="'+toX(opts.todayIndex)+'" y2="'+(PT+iH)
-        +'" stroke="#d8d8d8" stroke-width="1.5" stroke-dasharray="3,4"/>'
-        +'<text x="'+(toX(opts.todayIndex)+5)+'" y="'+(PT+11)+'" font-size="11" fill="#bbbbbb">today</text>'
+    // Everything right of "today" is projection — tint it so that is obvious
+    +(opts.todayIndex!==undefined && opts.todayIndex>=0 && opts.todayIndex<nums.length-1
+      ? '<rect x="'+toX(opts.todayIndex)+'" y="'+PT+'" width="'+(W-PR-toX(opts.todayIndex))
+        +'" height="'+iH+'" fill="#4a9e6a" fill-opacity="0.04"/>'
+        +'<line x1="'+toX(opts.todayIndex)+'" y1="'+PT+'" x2="'+toX(opts.todayIndex)+'" y2="'+(PT+iH)
+        +'" stroke="#c8c8c8" stroke-width="1.5" stroke-dasharray="3,4"/>'
+        +'<text x="'+(toX(opts.todayIndex)+6)+'" y="'+(PT+12)+'" font-size="11" fill="#aaaaaa">today</text>'
       : '')
     // Target curve — dashed, behind the real line
     +(tp?'<path d="'+tp+'" fill="none" stroke="#4a9e6a" stroke-width="2.5" stroke-dasharray="6,5" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>':'')
+    // Goal endpoint
+    +(tgtEnd?'<circle cx="'+tgtEnd[0]+'" cy="'+tgtEnd[1]+'" r="5" fill="#4a9e6a" stroke="white" stroke-width="2"/>':'')
     // Line — thicker
     +(lp?'<path d="'+lp+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>':'')
     // Avg line + pill
@@ -656,8 +662,8 @@ function renderCharts(){
   filtered.forEach(e=>{ if(e.bodyweight) bwMap[e.date]=parseFloat(e.bodyweight); });
   let bwDates=filtered.map(e=>e.date);
   if(goal && isValidDate(goal.deadline) && goal.deadline>todayStr()){
-    let d=todayStr();
-    let guard=0;                       // hard stop: two years of forward dates
+    bwDates.push(todayStr());          // today may not be logged yet
+    let d=todayStr(), guard=0;         // hard stop: two years of forward dates
     while(d<goal.deadline && guard++<730){ d=addDays(d,1); bwDates.push(d); }
   }
   bwDates=[...new Set(bwDates)].sort();
@@ -1158,7 +1164,7 @@ function updateTargetHints(){
   const d=document.getElementById('entry-date').value||todayStr();
   const tw=targetWeightOn(d);
   bwBox.innerHTML = tw!==null
-    ? '<div class="target-hint">Target for '+(d===todayStr()?'today':fmtDate(d))+': '+tw.toFixed(1)+' kg</div>'
+    ? '<div class="target-pill"><i>target</i><b>'+tw.toFixed(1)+'</b></div>'
     : '';
   calBox.innerHTML='';
 }
