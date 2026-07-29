@@ -126,7 +126,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v41</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v42</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
         <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
@@ -642,9 +642,10 @@ function renderCharts(){
   const bwMap={};
   filtered.forEach(e=>{ if(e.bodyweight) bwMap[e.date]=parseFloat(e.bodyweight); });
   let bwDates=filtered.map(e=>e.date);
-  if(goal && goal.deadline>todayStr()){
+  if(goal && isValidDate(goal.deadline) && goal.deadline>todayStr()){
     let d=todayStr();
-    while(d<goal.deadline){ d=addDays(d,1); bwDates.push(d); }
+    let guard=0;                       // hard stop: two years of forward dates
+    while(d<goal.deadline && guard++<730){ d=addDays(d,1); bwDates.push(d); }
   }
   bwDates=[...new Set(bwDates)].sort();
   const bwLabels=bwDates.map(d=>fmtDate(d));
@@ -881,6 +882,24 @@ const RATE_PCT = { slow:0.005, medium:0.010, aggressive:0.015 };  // of bodyweig
 let goal = null;
 let pendingRate = 'medium';
 
+// Anything arriving from the spreadsheet gets normalised to YYYY-MM-DD.
+// Sheets will happily hand back "28/10/2026" on a UK locale, and a raw string
+// comparison against that never terminates.
+function normDate(v){
+  if(!v) return null;
+  if(v instanceof Date && !isNaN(v)) return v.toISOString().split('T')[0];
+  const s=String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;                       // already correct
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})T/);                       // ISO with time
+  if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);                    // dd/mm/yyyy
+  if(m) return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+  const d=new Date(s);
+  if(!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+  return null;
+}
+function isValidDate(s){ return typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s+'T00:00:00')); }
+
 function daysBetween(a,b){
   return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
 }
@@ -953,7 +972,7 @@ function curveExponent(){
 // fitted exponent, with a decaying ripple so plateaus and small rebounds
 // are expected rather than read as failure. Lands exactly on target at the deadline.
 function targetWeightOn(dateStr){
-  if(!goal) return null;
+  if(!goal || !isValidDate(goal.deadline) || !isValidDate(goal.createdDate)) return null;
   const total = daysBetween(goal.createdDate, goal.deadline);
   if(total<=0) return goal.targetWeight;
   const elapsed = daysBetween(goal.createdDate, dateStr);
@@ -1007,7 +1026,21 @@ function loadGoal(){
     .then(r=>r.json())
     .then(d=>{
       goal = d.goal || null;
-      if(goal) goal._k = curveExponent();
+      if(goal){
+        goal.deadline    = normDate(goal.deadline);
+        goal.createdDate = normDate(goal.createdDate);
+        goal.targetWeight = Number(goal.targetWeight);
+        goal.startWeight  = Number(goal.startWeight);
+        // Rather than render something broken, drop a goal we cannot trust
+        if(!isValidDate(goal.deadline) || !isValidDate(goal.createdDate)
+           || !isFinite(goal.targetWeight) || !isFinite(goal.startWeight)
+           || goal.deadline <= goal.createdDate){
+          console.warn('Goal discarded — unusable dates or weights:', goal);
+          goal = null;
+        } else {
+          goal._k = curveExponent();
+        }
+      }
       return goal;
     })
     .catch(()=>{ goal=null; return null; });
