@@ -16,10 +16,10 @@
 :root{--bg:#ffffff;--card:#ffffff;--bg-input:#fafafa;--border:#eeeeee;--accent:#e85d40;--accent2:#f0856e;--muted:#bbb;--text:#1a1a1a;--text2:#555555;}
 html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);-webkit-tap-highlight-color:transparent;}
 .app{display:flex;flex-direction:column;height:100%;max-width:560px;margin:0 auto;background:#f5f5f5;}
-.header{flex-shrink:0;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 18px 12px;}
+.header{flex-shrink:0;background:var(--accent);padding:calc(14px + env(safe-area-inset-top)) 18px 13px;}
 .header-top{display:flex;align-items:center;gap:10px;}
 .app-title{font-family:'Inter',serif;font-size:26px;color:var(--text);font-weight:600;letter-spacing:-.03em;flex:1;}
-.app-sub{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:2px;}
+.app-sub{font-size:10px;color:rgba(255,255,255,.72);letter-spacing:.12em;text-transform:uppercase;margin-top:2px;}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);transition:background .3s;}
 .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 16px;}
 .bottom-nav{flex-shrink:0;background:var(--card);border-top:1px solid var(--border);display:flex;padding:8px 0 max(env(safe-area-inset-bottom),6px);}
@@ -128,22 +128,22 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
   <!-- Header -->
   <div class="header">
     <div class="header-top">
-      <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
+      <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;background:#fff;padding:1px;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v49</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v50</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
-          <div style="font-size:19px;font-weight:600;color:var(--accent);" id="hdr-streak-n">0</div>
-          <div style="font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;">streak</div>
+          <div style="font-size:19px;font-weight:600;color:#fff;" id="hdr-streak-n">0</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.72);letter-spacing:.05em;text-transform:uppercase;">streak</div>
         </div>
         <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
-          <circle cx="20" cy="20" r="16" fill="none" stroke="#eeeeee" stroke-width="3.5"/>
-          <circle id="ring-fill" cx="20" cy="20" r="16" fill="none" stroke="#e85d40" stroke-width="3.5"
+          <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="3.5"/>
+          <circle id="ring-fill" cx="20" cy="20" r="16" fill="none" stroke="#ffffff" stroke-width="3.5"
             stroke-dasharray="100.5" stroke-dashoffset="100.5"
             stroke-linecap="round" transform="rotate(-90 20 20)" style="transition:stroke-dashoffset .4s,stroke .4s;"/>
-          <text id="ring-text" x="20" y="24" text-anchor="middle" font-size="11" fill="#e85d40" font-weight="600" font-family="Inter,sans-serif">0/9</text>
+          <text id="ring-text" x="20" y="24" text-anchor="middle" font-size="11" fill="#ffffff" font-weight="600" font-family="Inter,sans-serif">0/9</text>
         </svg>
       </div>
     </div>
@@ -353,8 +353,11 @@ const ICONS_SM = { hackChinese: makeIcon('#4a5ae8','H',28), duChinese: makeIcon(
 // Sleep dropdowns
 // Sleep is now a plain text input
 
-function todayStr(){ return new Date().toISOString().split('T')[0]; }
-function fmtDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function isoLocal(dt){
+  return new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().split('T')[0];
+}
+function todayStr(){ return isoLocal(new Date()); }
+function fmtDate(s){ return new Date(s+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}); }
 function isComplete(e){ return !!(e.steps&&e.bodyweight&&e.calories&&e.sleep&&e.hackChinese&&e.duChinese&&e.yoyoChinese); }
 
 function countProgress(){
@@ -385,11 +388,11 @@ function updateProgress(){
   const ringText = document.getElementById('ring-text');
   if(ringFill){
     ringFill.style.strokeDashoffset = offset;
-    ringFill.style.stroke = complete ? '#4a9e6a' : '#e85d40';
+    ringFill.style.stroke = complete ? '#d6f5df' : '#ffffff';
   }
   if(ringText){
     ringText.textContent = filled+'/'+total;
-    ringText.style.fill = complete ? '#4a9e6a' : '#e85d40';
+    ringText.style.fill = complete ? '#d6f5df' : '#ffffff';
   }
   // Fire confetti only once when first reaching complete
   if(complete && !_wasComplete) launchConfetti();
@@ -507,18 +510,17 @@ function setRange(days,el){
 
 // Data helpers
 function getWeekKey(dateStr){
-  // Proper ISO 8601 week: week starts Monday, first week contains Jan 4
-  const d=new Date(dateStr+'T00:00:00');
-  const day=d.getDay()||7; // Mon=1 ... Sun=7
-  d.setDate(d.getDate()+4-day); // shift to Thursday of this week
-  const yearStart=new Date(d.getFullYear(),0,1);
+  // ISO 8601 week, computed entirely in UTC so it cannot drift by timezone
+  const d=new Date(dateStr+'T12:00:00Z');
+  const day=d.getUTCDay()||7;                 // Mon=1 ... Sun=7
+  d.setUTCDate(d.getUTCDate()+4-day);         // shift to the Thursday of this week
+  const yearStart=Date.UTC(d.getUTCFullYear(),0,1);
   const wn=Math.ceil(((d-yearStart)/86400000+1)/7);
-  const origDate=new Date(dateStr+'T00:00:00');
-  return origDate.getFullYear()+'-W'+String(wn).padStart(2,'0');
+  return Number(dateStr.slice(0,4))+'-W'+String(wn).padStart(2,'0');
 }
 function getFiltered(){
   const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-rangeDays);
-  return entries.filter(e=>e.date>=cutoff.toISOString().split('T')[0]);
+  return entries.filter(e=>e.date>=isoLocal(cutoff));
 }
 function avgOf(arr){ const v=arr.filter(x=>x!==null&&!isNaN(x)); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; }
 function fmtV(v,fmt){
@@ -847,7 +849,7 @@ function computeWeek(){
   const monday=new Date(now);
   monday.setDate(now.getDate()-(day===0?6:day-1));
   monday.setHours(0,0,0,0);
-  const monStr=monday.toISOString().split('T')[0];
+  const monStr=isoLocal(monday);
   const count=entries.filter(e=>e.date>=monStr&&e.date<=today&&isComplete(e)).length;
   return Math.min(count,7);
 }
@@ -919,7 +921,7 @@ function renderHistory(){
   if(!entries.length){list.innerHTML='<div class="empty">No entries yet.<br>Start logging to see your history.</div>';return;}
   // Only show last 14 days
   const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-14);
-  const cutStr=cutoff.toISOString().split('T')[0];
+  const cutStr=isoLocal(cutoff);
   const recent=[...entries].filter(e=>e.date>=cutStr).sort((a,b)=>b.date.localeCompare(a.date));
   if(!recent.length){list.innerHTML='<div class="empty">No entries in the last 14 days.</div>';return;}
   list.innerHTML=recent.map(e=>{
@@ -987,7 +989,7 @@ let pendingRate = 'medium';
 // comparison against that never terminates.
 function normDate(v){
   if(!v) return null;
-  if(v instanceof Date && !isNaN(v)) return v.toISOString().split('T')[0];
+  if(v instanceof Date && !isNaN(v)) return isoLocal(v);
   const s=String(v).trim();
   if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;                       // already correct
   let m=s.match(/^(\d{4})-(\d{2})-(\d{2})T/);                       // ISO with time
@@ -995,16 +997,17 @@ function normDate(v){
   m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);                    // dd/mm/yyyy
   if(m) return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
   const d=new Date(s);
-  if(!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+  if(!isNaN(d.getTime())) return isoLocal(d);
   return null;
 }
 function isValidDate(s){ return typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s+'T00:00:00')); }
 
 function daysBetween(a,b){
-  return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+  return Math.round((new Date(b+'T12:00:00Z') - new Date(a+'T12:00:00Z')) / 86400000);
 }
 function addDays(dateStr,n){
-  const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+n);
+  const d=new Date(dateStr+'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate()+n);
   return d.toISOString().split('T')[0];
 }
 
@@ -1255,7 +1258,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v49');
+  row('version','v50');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
