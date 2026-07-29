@@ -126,7 +126,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v42</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v43</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
         <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
@@ -256,7 +256,12 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 
   <div class="overlay hidden" id="goal-modal">
     <div class="modal modal-wide">
-      <h3>Weight goal</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
+        <h3 style="margin:0;">Weight goal</h3>
+        <button id="goal-remove" onclick="removeGoal()" style="display:none;border:1px solid #f0c4bd;
+          background:transparent;color:#c0392b;border-radius:8px;padding:5px 11px;font-family:'Inter',sans-serif;
+          font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Delete</button>
+      </div>
       <p style="margin-bottom:16px;">One goal at a time — saving replaces any existing goal.</p>
       <div class="field" style="margin-bottom:14px;">
         <div class="field-lbl">Target weight (kg)</div>
@@ -275,8 +280,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
         <button class="btn-sec" onclick="closeGoalModal()">Cancel</button>
         <button class="btn-pri" onclick="saveGoal()">Save goal</button>
       </div>
-      <button class="btn-sec" id="goal-remove" onclick="removeGoal()"
-        style="display:none;width:100%;margin-top:10px;color:#c0392b;border-color:#f0c4bd;">Delete goal</button>
+
     </div>
   </div>
 
@@ -567,7 +571,10 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
   for(let i=0;i<=3;i++){const v=yMin+(yR*i/3); const y=PT+iH-(i/3)*iH; ticks.push({y,l:fmtV(v,yAxisFmt||avgFmt||'#,##0')});}
   // X labels — max 5
   const step=Math.ceil(labels.length/5);
-  const xlbls=labels.map((l,i)=>({l,x:toX(i),show:i%step===0}));
+  const lastIdx=labels.length-1;
+  // Always label the final point — otherwise the axis looks like it stops early
+  const xlbls=labels.map((l,i)=>({l,x:toX(i),
+    show:(i%step===0 && (lastIdx-i)>=step*0.55) || i===lastIdx}));
   // Line path
   let lp='',fp='';
   const pts=nums.map((v,i)=>v!==null?[toX(i),toY(v)]:null);
@@ -602,6 +609,12 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
     +xlbls.filter(l=>l.show).map(l=>'<text x="'+l.x+'" y="'+(H-8)+'" text-anchor="middle" font-size="13" fill="#bbbbbb">'+l.l+'</text>').join('')
     // Fill area
     +(fp?'<path d="'+fp+'" fill="'+color+'" fill-opacity="0.1"/>':'')
+    // "Today" divider — everything right of it is projection, not history
+    +(opts.todayIndex!==undefined && opts.todayIndex>=0 && opts.todayIndex<nums.length
+      ? '<line x1="'+toX(opts.todayIndex)+'" y1="'+PT+'" x2="'+toX(opts.todayIndex)+'" y2="'+(PT+iH)
+        +'" stroke="#d8d8d8" stroke-width="1.5" stroke-dasharray="3,4"/>'
+        +'<text x="'+(toX(opts.todayIndex)+5)+'" y="'+(PT+11)+'" font-size="11" fill="#bbbbbb">today</text>'
+      : '')
     // Target curve — dashed, behind the real line
     +(tp?'<path d="'+tp+'" fill="none" stroke="#4a9e6a" stroke-width="2.5" stroke-dasharray="6,5" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>':'')
     // Line — thicker
@@ -674,7 +687,8 @@ function renderCharts(){
       +fmtDate(goal.deadline)+' '+goal.deadline.slice(0,4)+'</span>'
     : '';
   html+=buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70,null,
-    {action:bwAction, legend:bwLegend, targetData:bwTarget});
+    {action:bwAction, legend:bwLegend, targetData:bwTarget,
+     todayIndex: goal ? bwDates.indexOf(todayStr()) : -1});
   // Gym sessions — weekly sum
   const gymWks={};
   filtered.forEach(e=>{
@@ -1092,9 +1106,11 @@ function previewGoal(){
   }
   const deadline=projectDeadline(cur,tw,pendingRate);
   const wks=weeksToTarget(cur,tw,pendingRate);
+  const perWeek=(cur-tw)/wks;
   box.innerHTML='<div class="goal-warn" style="background:#f5f9f6;border-color:#cde8d6;color:#2f6a45;">'
-    +'Losing <strong>'+(cur-tw).toFixed(1)+' kg</strong> at the '+pendingRate+' rate takes about <strong>'
-    +Math.round(wks)+' weeks</strong> — reaching '+tw.toFixed(1)+' kg around <strong>'
+    +'Losing <strong>'+(cur-tw).toFixed(1)+' kg</strong> at the '+pendingRate+' rate means about '
+    +'<strong>'+perWeek.toFixed(2)+' kg per week</strong> — around <strong>'+Math.round(wks)
+    +' weeks</strong>, reaching '+tw.toFixed(1)+' kg by <strong>'
     +fmtDate(deadline)+' '+deadline.slice(0,4)+'</strong>.</div>';
 }
 
@@ -1133,6 +1149,8 @@ function removeGoal(){
 /* ── Log tab hints ──────────────────────────────────────── */
 
 function updateTargetHints(){
+  const lb=document.getElementById('log-goal-btn');
+  if(lb) lb.textContent = goal ? 'See goal' : '+ Goal';
   const bwBox=document.getElementById('bw-target-hint');
   const calBox=document.getElementById('cal-target-hint');
   if(!bwBox||!calBox) return;
@@ -1140,7 +1158,7 @@ function updateTargetHints(){
   const d=document.getElementById('entry-date').value||todayStr();
   const tw=targetWeightOn(d);
   bwBox.innerHTML = tw!==null
-    ? '<div class="target-hint">Target '+tw.toFixed(1)+' kg <span>· goal '+goal.targetWeight.toFixed(1)+' kg by '+fmtDate(goal.deadline)+' '+goal.deadline.slice(0,4)+'</span></div>'
+    ? '<div class="target-hint">Target for '+(d===todayStr()?'today':fmtDate(d))+': '+tw.toFixed(1)+' kg</div>'
     : '';
   calBox.innerHTML='';
 }
