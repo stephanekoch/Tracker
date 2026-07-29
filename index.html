@@ -16,10 +16,10 @@
 :root{--bg:#ffffff;--card:#ffffff;--bg-input:#fafafa;--border:#eeeeee;--accent:#e85d40;--accent2:#f0856e;--muted:#bbb;--text:#1a1a1a;--text2:#555555;}
 html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);-webkit-tap-highlight-color:transparent;}
 .app{display:flex;flex-direction:column;height:100%;max-width:560px;margin:0 auto;background:#f5f5f5;}
-.header{flex-shrink:0;background:var(--accent);padding:calc(14px + env(safe-area-inset-top)) 18px 13px;}
+.header{flex-shrink:0;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 18px 12px;}
 .header-top{display:flex;align-items:center;gap:10px;}
 .app-title{font-family:'Inter',serif;font-size:26px;color:var(--text);font-weight:600;letter-spacing:-.03em;flex:1;}
-.app-sub{font-size:10px;color:rgba(255,255,255,.72);letter-spacing:.12em;text-transform:uppercase;margin-top:2px;}
+.app-sub{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:2px;}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);transition:background .3s;}
 .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 16px;}
 .bottom-nav{flex-shrink:0;background:var(--card);border-top:1px solid var(--border);display:flex;padding:8px 0 max(env(safe-area-inset-bottom),6px);}
@@ -102,10 +102,15 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .goal-summary .gs-status{font-size:12px;font-weight:600;}
 .goal-summary .gs-detail{font-size:12px;color:var(--text2);line-height:1.6;}
 .goal-warn{background:#fff8e6;border:1px solid #ffe0a3;border-radius:9px;padding:10px 12px;font-size:14px;color:#8a6100;line-height:1.5;margin-top:10px;}
-.target-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:#f5f5f5;border:1px solid #ececec;border-radius:9px;padding:4px 13px;flex-shrink:0;line-height:1.15;}
-.target-pill b{font-size:18px;font-weight:600;color:var(--accent);}
-.target-pill i{font-size:10px;font-style:normal;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;}
+.tgt-strip{display:flex;gap:4px;margin-top:8px;}
+.tgt-day{flex:1;min-width:0;background:#f7f7f7;border:1px solid #ededed;border-radius:8px;
+  padding:6px 2px;text-align:center;line-height:1.25;}
+.tgt-day.now{background:#fdece8;border-color:#f7c9bd;}
+.tgt-day i{display:block;font-size:10px;font-style:normal;color:var(--muted);
+  letter-spacing:.04em;text-transform:uppercase;}
+.tgt-day b{display:block;font-size:14px;font-weight:600;color:var(--text2);}
+.tgt-day.now b{color:var(--accent);}
+.tgt-cap{font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-top:9px;}
 .rate-row{display:flex;gap:7px;}
 .rate-btn{flex:1;padding:11px 4px;border-radius:9px;border:1px solid var(--border);background:#fff;color:var(--muted);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:center;line-height:1.35;}
 .rate-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
@@ -128,22 +133,22 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
   <!-- Header -->
   <div class="header">
     <div class="header-top">
-      <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;background:#fff;padding:1px;"></canvas>
+      <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v50</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v51</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
-          <div style="font-size:19px;font-weight:600;color:#fff;" id="hdr-streak-n">0</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.72);letter-spacing:.05em;text-transform:uppercase;">streak</div>
+          <div style="font-size:19px;font-weight:600;color:var(--accent);" id="hdr-streak-n">0</div>
+          <div style="font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;">streak</div>
         </div>
         <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
-          <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="3.5"/>
-          <circle id="ring-fill" cx="20" cy="20" r="16" fill="none" stroke="#ffffff" stroke-width="3.5"
+          <circle cx="20" cy="20" r="16" fill="none" stroke="#eeeeee" stroke-width="3.5"/>
+          <circle id="ring-fill" cx="20" cy="20" r="16" fill="none" stroke="#e85d40" stroke-width="3.5"
             stroke-dasharray="100.5" stroke-dashoffset="100.5"
             stroke-linecap="round" transform="rotate(-90 20 20)" style="transition:stroke-dashoffset .4s,stroke .4s;"/>
-          <text id="ring-text" x="20" y="24" text-anchor="middle" font-size="11" fill="#ffffff" font-weight="600" font-family="Inter,sans-serif">0/9</text>
+          <text id="ring-text" x="20" y="24" text-anchor="middle" font-size="11" fill="#e85d40" font-weight="600" font-family="Inter,sans-serif">0/9</text>
         </svg>
       </div>
     </div>
@@ -179,7 +184,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           </div>
         </div>
         <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this);updateProgress()"/></div>
-        <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><div style="display:flex;gap:8px;align-items:stretch;"><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()" style="flex:1;min-width:0;"/><div id="bw-target-hint"></div></div></div>
+        <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()"/><div id="bw-target-hint"></div></div>
         <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/><div id="cal-target-hint"></div></div>
         <div class="field">
           <div class="field-lbl">Sleep (h:mm)</div>
@@ -273,7 +278,6 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           background:transparent;color:#c0392b;border-radius:8px;padding:5px 11px;font-family:'Inter',sans-serif;
           font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Delete</button>
       </div>
-      <p style="margin-bottom:16px;">One goal at a time — saving replaces any existing goal.</p>
       <div class="field" style="margin-bottom:14px;">
         <div class="field-lbl">Target weight (kg)</div>
         <input type="number" step="0.1" id="goal-weight" placeholder="62.0" oninput="previewGoal()"/>
@@ -388,11 +392,11 @@ function updateProgress(){
   const ringText = document.getElementById('ring-text');
   if(ringFill){
     ringFill.style.strokeDashoffset = offset;
-    ringFill.style.stroke = complete ? '#d6f5df' : '#ffffff';
+    ringFill.style.stroke = complete ? '#4a9e6a' : '#e85d40';
   }
   if(ringText){
     ringText.textContent = filled+'/'+total;
-    ringText.style.fill = complete ? '#d6f5df' : '#ffffff';
+    ringText.style.fill = complete ? '#4a9e6a' : '#e85d40';
   }
   // Fire confetti only once when first reaching complete
   if(complete && !_wasComplete) launchConfetti();
@@ -628,14 +632,20 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
     +xlbls.filter(l=>l.show).map(l=>'<text x="'+l.x+'" y="'+(H-8)+'" text-anchor="middle" font-size="15" fill="#999999">'+l.l+'</text>').join('')
     // Fill area
 
-    // Everything right of "today" is projection — tint it so that is obvious
-    +(opts.todayIndex!==undefined && opts.todayIndex>=0 && opts.todayIndex<nums.length-1
-      ? '<rect x="'+toX(opts.todayIndex)+'" y="'+PT+'" width="'+(W-PR-toX(opts.todayIndex))
-        +'" height="'+iH+'" fill="#4a9e6a" fill-opacity="0.09"/>'
-        +'<line x1="'+toX(opts.todayIndex)+'" y1="'+PT+'" x2="'+toX(opts.todayIndex)+'" y2="'+(PT+iH)
-        +'" stroke="#c8c8c8" stroke-width="1.5" stroke-dasharray="3,4"/>'
-        +'<text x="'+(toX(opts.todayIndex)+6)+'" y="'+(PT+12)+'" font-size="14" fill="#999999" font-weight="600">today</text>'
-      : '')
+    // The goal window is tinted, so actual and target can be compared inside it
+    +(function(){
+      const mi=opts.markIndex;
+      if(mi===undefined||mi===null||mi<0||mi>=nums.length) return '';
+      const mx=toX(mi), lbl=opts.markLabel||'';
+      // Flip the label to the left of the line when it would run off the edge
+      const flip = mx > PL+iW*0.52;
+      return '<rect x="'+mx+'" y="'+PT+'" width="'+(W-PR-mx)+'" height="'+iH
+        +'" fill="#4a9e6a" fill-opacity="0.08"/>'
+        +'<line x1="'+mx+'" y1="'+PT+'" x2="'+mx+'" y2="'+(PT+iH)
+        +'" stroke="#bdbdbd" stroke-width="1.5" stroke-dasharray="3,4"/>'
+        +(lbl?'<text x="'+(flip?mx-7:mx+7)+'" y="'+(PT+13)+'" text-anchor="'+(flip?'end':'start')
+          +'" font-size="14" fill="#8a8a8a" font-weight="600">'+lbl+'</text>':'');
+    })()
     // Target curve — dashed, behind the real line
     +(tp?'<path d="'+tp+'" fill="none" stroke="#2f8f5b" stroke-width="4" stroke-dasharray="9,6" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>':'')
     // Goal endpoint
@@ -736,6 +746,17 @@ function renderCharts(){
   const bwData=bwDates.map(d=>bwMap[d]!==undefined?bwMap[d]:null);
   const bwTarget=goal?bwDates.map(d=>d<goal.createdDate?null:targetWeightOn(d)):null;
 
+  // Where the goal window begins on this axis. If the goal predates the visible
+  // range, the whole chart is inside it.
+  let goalMarkIdx=-1;
+  if(goal && bwDates.length){
+    if(goal.createdDate<=bwDates[0]) goalMarkIdx=0;
+    else {
+      goalMarkIdx=bwDates.indexOf(goal.createdDate);
+      if(goalMarkIdx<0) goalMarkIdx=bwDates.findIndex(d=>d>=goal.createdDate);
+    }
+  }
+
   // Status pill — how you sit against the curve today
   let statusPill='';
   if(goal){
@@ -772,7 +793,8 @@ function renderCharts(){
   }
   html+=buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70,null,
     {action:bwAction, titleExtra:statusPill, legend:bwLegend, targetData:bwTarget,
-     todayIndex: goal ? bwDates.indexOf(todayStr()) : -1});
+     markIndex: goalMarkIdx,
+     markLabel: goal ? 'Goal started '+fmtDate(goal.createdDate) : ''});
   // Gym sessions — weekly sum
   const gymWks={};
   filtered.forEach(e=>{
@@ -1245,9 +1267,18 @@ function updateTargetHints(){
   if(!bwBox||!calBox) return;
   if(!goal){ bwBox.innerHTML=''; calBox.innerHTML=''; return; }
   const d=document.getElementById('entry-date').value||todayStr();
-  const tw=targetWeightOn(d);
-  bwBox.innerHTML = tw!==null
-    ? '<div class="target-pill"><i>target</i><b>'+tw.toFixed(1)+'</b></div>'
+  // Seven days of targets rolling forward from the selected date
+  const cells=[];
+  for(let i=0;i<7;i++){
+    const day=addDays(d,i);
+    const tv=targetWeightOn(day);
+    if(tv===null) continue;
+    const lbl = i===0 ? 'Now'
+      : new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'});
+    cells.push('<div class="tgt-day'+(i===0?' now':'')+'"><i>'+lbl+'</i><b>'+tv.toFixed(1)+'</b></div>');
+  }
+  bwBox.innerHTML = cells.length
+    ? '<div class="tgt-cap">Target · next 7 days</div><div class="tgt-strip">'+cells.join('')+'</div>'
     : '';
   calBox.innerHTML='';
 }
@@ -1258,7 +1289,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v50');
+  row('version','v51');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
