@@ -103,7 +103,8 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .rate-row{display:flex;gap:7px;}
 .rate-btn{flex:1;padding:10px 4px;border-radius:9px;border:1px solid var(--border);background:#fff;color:var(--muted);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;line-height:1.35;}
 .rate-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-.rate-btn small{display:block;font-size:10px;font-weight:400;opacity:.85;}
+.rate-btn small{display:block;font-size:10px;font-weight:400;opacity:.75;margin-top:1px;}
+.rate-btn em{display:block;font-size:11px;font-style:normal;font-weight:600;margin-top:5px;opacity:.95;}
 .modal-wide{max-width:360px;}
 .modal .field-lbl{font-size:11px;color:var(--muted);margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase;}
 .modal input[type=number],.modal input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Inter',sans-serif;background:var(--bg-input);color:var(--text);outline:none;-webkit-appearance:none;}
@@ -124,7 +125,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v38</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v40</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
         <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
@@ -256,20 +257,26 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
     <div class="modal modal-wide">
       <h3>Weight goal</h3>
       <p style="margin-bottom:16px;">One goal at a time — saving replaces any existing goal.</p>
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <div class="field" style="flex:1;margin:0;">
+          <div class="field-lbl">Height (cm)</div>
+          <input type="number" id="goal-height" placeholder="170" oninput="previewGoal()"/>
+        </div>
+        <div class="field" style="flex:1;margin:0;">
+          <div class="field-lbl">Age</div>
+          <input type="number" id="goal-age" placeholder="35" oninput="previewGoal()"/>
+        </div>
+      </div>
       <div class="field" style="margin-bottom:14px;">
         <div class="field-lbl">Target weight (kg)</div>
         <input type="number" step="0.1" id="goal-weight" placeholder="62.0" oninput="previewGoal()"/>
       </div>
-      <div class="field" style="margin-bottom:14px;">
-        <div class="field-lbl">Deadline</div>
-        <input type="date" id="goal-deadline" onchange="previewGoal()"/>
-      </div>
       <div class="field" style="margin-bottom:6px;">
-        <div class="field-lbl">Preferred rate</div>
+        <div class="field-lbl">Rate of loss</div>
         <div class="rate-row">
-          <button class="rate-btn" id="rate-slow" onclick="setRate('slow')">Slow<small>0.5% / wk</small></button>
-          <button class="rate-btn active" id="rate-medium" onclick="setRate('medium')">Medium<small>1% / wk</small></button>
-          <button class="rate-btn" id="rate-aggressive" onclick="setRate('aggressive')">Aggressive<small>1.5% / wk</small></button>
+          <button class="rate-btn" id="rate-slow" onclick="setRate('slow')">Slow<small>0.5% / wk</small><em id="eta-slow">—</em></button>
+          <button class="rate-btn active" id="rate-medium" onclick="setRate('medium')">Medium<small>1% / wk</small><em id="eta-medium">—</em></button>
+          <button class="rate-btn" id="rate-aggressive" onclick="setRate('aggressive')">Aggressive<small>1.5% / wk</small><em id="eta-aggressive">—</em></button>
         </div>
       </div>
       <div id="goal-feedback"></div>
@@ -867,6 +874,7 @@ function launchConfetti(){
 const KCAL_PER_KG = 7700;            // energy density of body tissue lost
 const RATE_PCT = { slow:0.005, medium:0.010, aggressive:0.015 };  // of bodyweight per week
 let goal = null;
+let profile = { heightCm:null, age:null };
 let pendingRate = 'medium';
 
 function daysBetween(a,b){
@@ -906,10 +914,14 @@ function slopeOf(pts){
   return (n*sxy-sx*sy)/den;
 }
 
-// TDEE = mean intake − (kg/day change × kcal/kg).
-// Losing weight ⇒ negative slope ⇒ TDEE above intake. This is measured from
-// your own data, so it already absorbs your activity level and metabolism.
-function estimateTDEE(){
+// ── Two independent maintenance estimates ────────────────
+// (a) Intake-balance: mean intake minus weight trend. Correct arithmetic,
+//     but inherits any bias in the food log one-for-one.
+// (b) Mifflin-St Jeor BMR scaled by activity derived from logged steps and
+//     gym sessions. Never touches the food log, so it is immune to that bias.
+// The ratio between them measures how much the log under-reports.
+
+function balanceTDEE(){
   const win = entries
     .filter(e=>e.bodyweight&&e.calories)
     .sort((a,b)=>a.date.localeCompare(b.date))
@@ -921,10 +933,48 @@ function estimateTDEE(){
   const pts = win.map((e,i)=>[i,parseFloat(e.bodyweight)]).filter(p=>!isNaN(p[1]));
   const slope = slopeOf(pts);
   if(slope===null) return null;
-  const tdee = meanCal - slope*KCAL_PER_KG;
-  // Sanity clamp — bad data shouldn't produce an absurd target
-  if(tdee < 1200 || tdee > 5000) return Math.round(Math.min(Math.max(tdee,1200),5000));
-  return Math.round(tdee);
+  return Math.round(Math.min(Math.max(meanCal - slope*KCAL_PER_KG, 1000), 5000));
+}
+
+function mifflinTDEE(){
+  if(!profile.heightCm || !profile.age) return null;
+  const w = smoothWeight(todayStr(),10) || latestWeight();
+  if(!w) return null;
+  const bmr = 10*w + 6.25*profile.heightCm - 5*profile.age + 5;   // male
+
+  const win = entries.slice(-56);
+  const stepVals = win.map(e=>parseInt(e.steps)).filter(v=>!isNaN(v)&&v>0);
+  const avgSteps = stepVals.length ? stepVals.reduce((a,b)=>a+b,0)/stepVals.length : 6000;
+  const gymPerWeek = win.length ? (win.filter(e=>e.gym).length / win.length) * 7 : 0;
+
+  // Bottom-up component sum — walking ~2.5 METs net, lifting ~4 METs net
+  const stepKcal = 2.5 * w * (avgSteps/110/60);
+  const gymKcal  = 4 * w * (50/60) * (gymPerWeek/7);
+  const compTDEE = (bmr + stepKcal + gymKcal + 250) / 0.9;   // /0.9 adds ~10% TEF
+
+  // Top-down PAL, anchored on step count
+  const pal = 1.40 + Math.max(0, avgSteps-5000)/1000*0.035 + gymPerWeek*0.015;
+  const palTDEE = bmr * pal;
+
+  return { bmr: Math.round(bmr), tdee: Math.round((compTDEE+palTDEE)/2),
+           avgSteps: Math.round(avgSteps), gymPerWeek: gymPerWeek, pal: pal };
+}
+
+// Reconciles the two. logBias is what fraction of real intake your log captures.
+function energyModel(){
+  const bal = balanceTDEE();
+  const mif = mifflinTDEE();
+  if(!mif) return bal ? { trueTDEE: bal, loggedTDEE: bal, logBias: 1, bmr: null, source:'balance' } : null;
+  if(!bal) return { trueTDEE: mif.tdee, loggedTDEE: mif.tdee, logBias: 1, bmr: mif.bmr, source:'mifflin', detail:mif };
+  // Clamp so one freak month cannot produce a nonsense correction
+  const bias = Math.min(Math.max(bal/mif.tdee, 0.6), 1.15);
+  return { trueTDEE: mif.tdee, loggedTDEE: bal, logBias: bias, bmr: mif.bmr, source:'blended', detail:mif };
+}
+
+// Kept for callers that just want a single number, expressed in log units
+function estimateTDEE(){
+  const m = energyModel();
+  return m ? m.loggedTDEE : null;
 }
 
 // How front-loaded is this person's weight loss? Fitted against the curve
@@ -978,39 +1028,77 @@ function targetWeightOn(dateStr){
   return goal.startWeight - (goal.startWeight-goal.targetWeight)*f;
 }
 
-// Rolling calorie target. Recomputed from where you actually are today, so
-// a heavy weekend tightens tomorrow rather than being written off.
+// Rolling calorie target. The deficit is real energy, so it is applied to true
+// maintenance — then converted back into the units your food log actually reads
+// in, so the number on screen is the number to log.
 function calorieTarget(){
   if(!goal) return null;
-  const tdee = estimateTDEE();
-  if(!tdee) return { tdee:null, target:null, reason:'not enough data' };
+  const m = energyModel();
+  if(!m) return { target:null, reason:'not enough data' };
   const today = todayStr();
   const cur = smoothWeight(today,10) || latestWeight();
-  if(!cur) return { tdee, target:null, reason:'no bodyweight data' };
+  if(!cur) return { target:null, reason:'no bodyweight data' };
+
   const daysLeft = daysBetween(today, goal.deadline);
   const remaining = cur - goal.targetWeight;
 
   if(daysLeft<=0 || remaining<=0){
-    return { tdee, target:tdee, deficit:0, cur, daysLeft, remaining,
-             maintenance:true, onTrack:remaining<=0 };
+    return { ...m, target:m.loggedTDEE, trueEat:m.trueTDEE, deficit:0,
+             cur, daysLeft, remaining, maintenance:true };
   }
 
   const required = remaining*KCAL_PER_KG/daysLeft;
-  const maxWeekly = cur * (RATE_PCT[goal.rate]||RATE_PCT.medium);
-  const maxDeficit = maxWeekly*KCAL_PER_KG/7;
-  const deficit = Math.min(required, maxDeficit);
-  // Never prescribe below ~65% of maintenance, and never below 1500 kcal
-  const floor = Math.max(1500, Math.round(tdee*0.65));
-  const target = Math.max(Math.round(tdee - deficit), floor);
+  const maxDeficit = cur*(RATE_PCT[goal.rate]||RATE_PCT.medium)*KCAL_PER_KG/7;
+  let deficit = Math.min(required, maxDeficit);
+
+  // Never below BMR of real intake — that is the physiological floor
+  const trueFloor = m.bmr ? Math.max(m.bmr, 1400) : 1500;
+  let trueEat = m.trueTDEE - deficit;
+  const floored = trueEat < trueFloor;
+  if(floored){ trueEat = trueFloor; deficit = m.trueTDEE - trueEat; }
+
   return {
-    tdee, target, cur, daysLeft, remaining,
-    deficit: Math.round(tdee-target),
+    ...m,
+    cur, daysLeft, remaining,
+    trueEat: Math.round(trueEat),
+    target: Math.round(trueEat * m.logBias),   // what to log
+    deficit: Math.round(deficit),
     required: Math.round(required),
-    maxDeficit: Math.round(maxDeficit),
     rateLimited: required > maxDeficit,
-    steep: (tdee-target) > 750,
-    floored: Math.round(tdee-deficit) < floor
+    steep: deficit > 750,
+    floored
   };
+}
+
+// Weeks to go from start to target at a given %-of-bodyweight rate.
+// Rate is a percentage, so the kg lost per week shrinks as you get lighter —
+// that makes this exponential decay rather than a straight line.
+function weeksToTarget(startW, targetW, rate){
+  const r = RATE_PCT[rate] || RATE_PCT.medium;
+  if(!startW || !targetW || targetW >= startW) return null;
+  return Math.log(targetW/startW) / Math.log(1-r);
+}
+
+function projectDeadline(startW, targetW, rate){
+  const w = weeksToTarget(startW, targetW, rate);
+  if(w===null || !isFinite(w) || w<=0) return null;
+  return addDays(todayStr(), Math.ceil(w*7));
+}
+
+// Where the current trend actually lands, regardless of the plan
+function projectedFinish(){
+  if(!goal) return null;
+  const withBw = entries.filter(e=>e.bodyweight).sort((a,b)=>a.date.localeCompare(b.date)).slice(-28);
+  if(withBw.length<10) return null;
+  const pts = withBw.map((e,i)=>[i,parseFloat(e.bodyweight)]).filter(p=>!isNaN(p[1]));
+  const slope = slopeOf(pts);              // kg per day
+  if(slope===null || slope>=-0.002) return { stalled:true };
+  const cur = smoothWeight(todayStr(),10) || latestWeight();
+  if(cur===null) return null;
+  const days = Math.ceil((cur-goal.targetWeight)/(-slope));
+  if(days<=0) return { done:true };
+  if(days>3650) return { stalled:true };
+  return { date: addDays(todayStr(), days), days };
 }
 
 /* ── Goal storage ───────────────────────────────────────── */
@@ -1020,6 +1108,7 @@ function loadGoal(){
     .then(r=>r.json())
     .then(d=>{
       goal = d.goal || null;
+      if(d.profile) profile = { heightCm:d.profile.heightCm||null, age:d.profile.age||null };
       if(goal) goal._k = curveExponent();
       return goal;
     })
@@ -1029,14 +1118,14 @@ function loadGoal(){
 function openGoalModal(){
   document.getElementById('goal-modal').classList.remove('hidden');
   const rm=document.getElementById('goal-remove');
+  document.getElementById('goal-height').value = profile.heightCm || '';
+  document.getElementById('goal-age').value = profile.age || '';
   if(goal){
     document.getElementById('goal-weight').value = goal.targetWeight;
-    document.getElementById('goal-deadline').value = goal.deadline;
     setRate(goal.rate);
     rm.style.display='inline';
   } else {
     document.getElementById('goal-weight').value='';
-    document.getElementById('goal-deadline').value=addDays(todayStr(),84);
     setRate('medium');
     rm.style.display='none';
   }
@@ -1051,45 +1140,84 @@ function setRate(r){
   previewGoal();
 }
 
-// Live sanity check while the goal is being entered
+// Live projection while the goal is being entered
 function previewGoal(){
   const box=document.getElementById('goal-feedback');
   if(!box) return;
   const tw=parseFloat(document.getElementById('goal-weight').value);
-  const dl=document.getElementById('goal-deadline').value;
   const cur=latestWeight();
-  if(!tw||!dl||!cur){ box.innerHTML=''; return; }
-  const days=daysBetween(todayStr(),dl);
-  if(days<=0){ box.innerHTML='<div class="goal-warn">The deadline needs to be in the future.</div>'; return; }
+  profile.heightCm = parseFloat(document.getElementById('goal-height').value) || null;
+  profile.age      = parseFloat(document.getElementById('goal-age').value) || null;
+
+  // Every rate shows where it lands, so the trade-off is visible up front
+  ['slow','medium','aggressive'].forEach(r=>{
+    const el=document.getElementById('eta-'+r);
+    if(!el) return;
+    if(!tw||!cur||tw>=cur){ el.textContent='—'; return; }
+    const wks=weeksToTarget(cur,tw,r);
+    const d=projectDeadline(cur,tw,r);
+    el.textContent = d ? Math.round(wks)+' wks' : '—';
+    el.title = d || '';
+  });
+
+  if(!tw||!cur){ box.innerHTML=''; return; }
+  if(tw>=cur){
+    box.innerHTML='<div class="goal-warn">That target is at or above your current weight of '
+      +cur.toFixed(1)+' kg, so no deficit is needed.</div>';
+    return;
+  }
+
+  const deadline=projectDeadline(cur,tw,pendingRate);
+  const wks=weeksToTarget(cur,tw,pendingRate);
   const loss=cur-tw;
-  if(loss<=0){ box.innerHTML='<div class="goal-warn">That target is at or above your current weight, so no deficit is needed.</div>'; return; }
-  const perWeek=loss/(days/7);
-  const tdee=estimateTDEE();
-  const requiredDeficit=Math.round(loss*KCAL_PER_KG/days);
-  const maxWeekly=cur*RATE_PCT[pendingRate];
+  const days=daysBetween(todayStr(),deadline);
+  const m=energyModel();
+
   let msg='<div class="goal-warn" style="background:#f5f9f6;border-color:#cde8d6;color:#2f6a45;">'
-    +'Needs about <strong>'+perWeek.toFixed(2)+' kg/week</strong>'
-    +(tdee?' — roughly <strong>'+requiredDeficit.toLocaleString()+' kcal/day</strong> below your estimated maintenance of '+tdee.toLocaleString()+'.':'.')
-    +'</div>';
-  if(perWeek > maxWeekly*1.02){
-    msg='<div class="goal-warn">This deadline needs <strong>'+perWeek.toFixed(2)+' kg/week</strong>, faster than '
-      +pendingRate+' ('+maxWeekly.toFixed(2)+' kg/week). The app will hold you to the '+pendingRate
-      +' rate, so you would reach the target after the deadline. Push the date out or pick a faster rate.</div>';
-  } else if(requiredDeficit>750){
-    msg='<div class="goal-warn">That works out to about <strong>'+requiredDeficit.toLocaleString()+' kcal/day</strong> below maintenance. '
-      +'Deficits past ~750 tend to cost strength in the gym and get hard to hold. A later deadline would be gentler.</div>';
+    +'Losing '+loss.toFixed(1)+' kg at the '+pendingRate+' rate takes about <strong>'
+    +Math.round(wks)+' weeks</strong> — reaching '+tw.toFixed(1)+' kg around <strong>'
+    +fmtDate(deadline)+' '+deadline.slice(0,4)+'</strong>.</div>';
+
+  if(m && m.source==='blended'){
+    const deficit=Math.round(loss*KCAL_PER_KG/days);
+    const trueFloor=Math.max(m.bmr,1400);
+    let trueEat=m.trueTDEE-deficit;
+    const floored=trueEat<trueFloor;
+    if(floored) trueEat=trueFloor;
+    const logIt=Math.round(trueEat*m.logBias);
+    msg+='<div class="goal-warn" style="background:#f7f9fc;border-color:#d6e2f0;color:#3a5875;">'
+      +'Maintenance: <strong>'+m.trueTDEE.toLocaleString()+' kcal</strong> from your height, age, '
+      +'steps and gym — but your food log reads about <strong>'+Math.round(m.logBias*100)+'%</strong> of that '
+      +'('+m.loggedTDEE.toLocaleString()+'). So aim to <strong>log '+logIt.toLocaleString()+' kcal</strong>, '
+      +'which is roughly '+Math.round(trueEat).toLocaleString()+' actually eaten.</div>';
+    if(floored){
+      msg+='<div class="goal-warn">That pace would take you below your BMR of '+m.bmr.toLocaleString()
+        +' kcal, so the target is held there and you would arrive later than the date above. '
+        +'A slower rate gives a date you can trust.</div>';
+    } else if(deficit>750){
+      msg+='<div class="goal-warn">A '+deficit.toLocaleString()+' kcal daily deficit is steep enough to '
+        +'start costing you strength in the gym. Medium or slow would be easier to hold.</div>';
+    }
+  } else if(m){
+    const deficit=Math.round(loss*KCAL_PER_KG/days);
+    msg+='<div class="goal-warn" style="background:#f7f9fc;border-color:#d6e2f0;color:#3a5875;">'
+      +'Roughly <strong>'+deficit.toLocaleString()+' kcal/day</strong> below your estimated maintenance of '
+      +m.loggedTDEE.toLocaleString()+'. Add your height and age above for a second, more reliable estimate.</div>';
   }
   box.innerHTML=msg;
 }
 
 function saveGoal(){
   const tw=parseFloat(document.getElementById('goal-weight').value);
-  const dl=document.getElementById('goal-deadline').value;
-  if(!tw||!dl){ alert('Enter a target weight and a deadline.'); return; }
+  if(!tw){ alert('Enter a target weight.'); return; }
   const cur=latestWeight();
   if(!cur){ alert('Log a bodyweight first so the goal has a starting point.'); return; }
+  if(tw>=cur){ alert('Your target needs to be below your current weight of '+cur.toFixed(1)+' kg.'); return; }
+  const dl=projectDeadline(cur,tw,pendingRate);
+  if(!dl){ alert('Could not work out a date for that target and rate.'); return; }
   const payload={ action:'saveGoal', targetWeight:tw, deadline:dl, rate:pendingRate,
-                  createdDate:todayStr(), startWeight:Math.round(cur*10)/10 };
+                  createdDate:todayStr(), startWeight:Math.round(cur*10)/10,
+                  heightCm:profile.heightCm, age:profile.age };
   fetch(API,{method:'POST',body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(()=>{
@@ -1122,16 +1250,20 @@ function updateTargetHints(){
   const d=document.getElementById('entry-date').value||todayStr();
   const tw=targetWeightOn(d);
   bwBox.innerHTML = tw!==null
-    ? '<div class="target-hint">Target '+tw.toFixed(1)+' kg <span>· goal '+goal.targetWeight.toFixed(1)+' kg by '+fmtDate(goal.deadline)+'</span></div>'
+    ? '<div class="target-hint">Target '+tw.toFixed(1)+' kg <span>· goal '+goal.targetWeight.toFixed(1)+' kg by '+fmtDate(goal.deadline)+' '+goal.deadline.slice(0,4)+'</span></div>'
     : '';
   const ct=calorieTarget();
   if(!ct||!ct.target){
     calBox.innerHTML='<div class="target-hint"><span>Not enough calorie history yet to set a target.</span></div>';
   } else if(ct.maintenance){
     calBox.innerHTML='<div class="target-hint">Target '+ct.target.toLocaleString()+' kcal <span>· maintenance</span></div>';
+  } else if(ct.source==='blended'){
+    calBox.innerHTML='<div class="target-hint">Log '+ct.target.toLocaleString()+' kcal <span>· ≈'
+      +ct.trueEat.toLocaleString()+' actually eaten, '+ct.deficit.toLocaleString()
+      +' under your '+ct.trueTDEE.toLocaleString()+' maintenance</span></div>';
   } else {
     calBox.innerHTML='<div class="target-hint">Target '+ct.target.toLocaleString()+' kcal <span>· '
-      +ct.deficit.toLocaleString()+' below your '+ct.tdee.toLocaleString()+' maintenance</span></div>';
+      +ct.deficit.toLocaleString()+' below your '+ct.loggedTDEE.toLocaleString()+' maintenance</span></div>';
   }
 }
 
@@ -1143,27 +1275,48 @@ function goalSummaryHTML(){
   const cur=smoothWeight(today,10)||latestWeight();
   const tw=targetWeightOn(today);
   if(cur===null||tw===null) return '';
+
   const gap=cur-tw;
-  const ahead=gap<=0;
   const status=Math.abs(gap)<0.15
     ? '<span class="gs-status" style="color:#4a9e6a;">On track</span>'
-    : ahead
+    : gap<0
       ? '<span class="gs-status" style="color:#4a9e6a;">'+Math.abs(gap).toFixed(1)+' kg ahead</span>'
       : '<span class="gs-status" style="color:#e85d40;">'+gap.toFixed(1)+' kg behind</span>';
+
   const daysLeft=daysBetween(today,goal.deadline);
   const ct=calorieTarget();
-  let line2='Now '+cur.toFixed(1)+' kg · curve says '+tw.toFixed(1)+' kg · '
-    +(daysLeft>0?daysLeft+' days to go':'deadline passed');
-  if(ct&&ct.target&&!ct.maintenance) line2+=' · eat '+ct.target.toLocaleString()+' kcal';
+
+  let line='Now '+cur.toFixed(1)+' kg · plan says '+tw.toFixed(1)+' kg · '
+    +(daysLeft>0?daysLeft+' days to go':'past target date');
+  if(ct&&ct.target&&!ct.maintenance) line+=' · log '+ct.target.toLocaleString()+' kcal';
+
+  // What the current trend actually implies, which may differ from the plan
+  const pf=projectedFinish();
+  let line2='';
+  if(pf&&pf.done){
+    line2='<div class="gs-detail" style="color:#4a9e6a;margin-top:3px;">Target reached.</div>';
+  } else if(pf&&pf.stalled){
+    line2='<div class="gs-detail" style="color:#e85d40;margin-top:3px;">'
+      +'Your last 4 weeks are flat or rising, so there is no date to project yet.</div>';
+  } else if(pf&&pf.date){
+    const slip=daysBetween(goal.deadline,pf.date);
+    const col=slip>14?'#e85d40':(slip<-14?'#4a9e6a':'var(--text2)');
+    line2='<div class="gs-detail" style="color:'+col+';margin-top:3px;">'
+      +'At your current trend you would get there around <strong>'+fmtDate(pf.date)+' '+pf.date.slice(0,4)+'</strong>'
+      +(Math.abs(slip)>14?(slip>0?' — about '+Math.round(slip/7)+' weeks later than planned.':' — about '+Math.round(-slip/7)+' weeks earlier than planned.'):'.')
+      +'</div>';
+  }
+
   let warn='';
-  if(ct&&ct.rateLimited) warn='<div class="goal-warn">Hitting '+goal.targetWeight.toFixed(1)
-    +' kg by '+fmtDate(goal.deadline)+' would need more than your '+goal.rate
-    +' rate allows, so the target is capped there. Expect to land slightly after the deadline.</div>';
-  else if(ct&&ct.steep) warn='<div class="goal-warn">This is a '+ct.deficit.toLocaleString()
-    +' kcal daily deficit. Sustainable for a while, but watch your gym numbers — if the lifts start dropping, ease the deadline out.</div>';
+  if(ct&&ct.steep) warn='<div class="goal-warn">This is a '+ct.deficit.toLocaleString()
+    +' kcal daily deficit. Sustainable for a while, but watch your gym numbers — if the lifts start dropping, switch to a slower rate.</div>';
+  else if(ct&&ct.floored) warn='<div class="goal-warn">Catching up fully would take you below your BMR, '
+    +'so the target is held at '+ct.target.toLocaleString()+' kcal logged. You will land a little after the planned date.</div>';
+
   return '<div class="goal-summary"><div class="gs-top"><div class="gs-title">Goal: '
-    +goal.targetWeight.toFixed(1)+' kg by '+fmtDate(goal.deadline)+'</div>'+status+'</div>'
-    +'<div class="gs-detail">'+line2+'</div>'+warn+'</div>';
+    +goal.targetWeight.toFixed(1)+' kg by '+fmtDate(goal.deadline)+' '+goal.deadline.slice(0,4)
+    +' <span style="font-weight:400;color:var(--muted);">('+goal.rate+')</span></div>'+status+'</div>'
+    +'<div class="gs-detail">'+line+'</div>'+line2+warn+'</div>';
 }
 
 // Init — load from Sheets with retry
