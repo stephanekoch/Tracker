@@ -85,9 +85,9 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .toast{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none;}
 .toast-inner{background:var(--accent);color:white;border-radius:16px;padding:18px 32px;font-size:17px;font-family:'Inter',sans-serif;font-weight:700;display:flex;align-items:center;gap:10px;}
 .hidden{display:none!important;}
-#chart-tip{position:fixed;z-index:300;width:140px;background:#1a1a1a;color:#fff;border-radius:10px;
-  padding:9px 11px;font-family:'Inter',sans-serif;font-size:15px;line-height:1.45;text-align:center;
-  box-shadow:0 4px 16px rgba(0,0,0,.22);pointer-events:auto;}
+#chart-tip{position:fixed;z-index:300;width:142px;background:#f2f2f2;color:#1a1a1a;
+  border:1px solid #e0e0e0;border-radius:10px;padding:9px 11px;font-family:'Inter',sans-serif;
+  font-size:15px;line-height:1.45;text-align:center;box-shadow:0 3px 14px rgba(0,0,0,.13);pointer-events:auto;}
 .chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
 .goal-btn{border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:20px;padding:6px 13px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .goal-btn:hover{background:var(--accent);color:#fff;}
@@ -131,7 +131,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v48</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v49</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
@@ -145,7 +145,6 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
             stroke-linecap="round" transform="rotate(-90 20 20)" style="transition:stroke-dashoffset .4s,stroke .4s;"/>
           <text id="ring-text" x="20" y="24" text-anchor="middle" font-size="11" fill="#e85d40" font-weight="600" font-family="Inter,sans-serif">0/9</text>
         </svg>
-        <div class="dot" id="status-dot"></div>
       </div>
     </div>
   </div>
@@ -210,10 +209,6 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 
     <!-- DASHBOARD -->
     <div id="tab-dashboard">
-      <div class="stat-card" style="display:flex;align-items:center;justify-content:center;gap:9px;padding:13px;margin-bottom:12px;">
-        <span class="stat-val" id="stat-week" style="font-size:20px;">—</span>
-        <span class="stat-lbl" style="margin:0;">days fully logged this week</span>
-      </div>
       <div class="range-sel">
         <button class="range-btn" onclick="setRange(30,this)">1 month</button>
         <button class="range-btn active" onclick="setRange(91,this)">3 months</button>
@@ -400,12 +395,7 @@ function updateProgress(){
   if(complete && !_wasComplete) launchConfetti();
   _wasComplete = complete;
 }
-function setDot(color,title){
-  const el=document.getElementById('status-dot');
-  if(!el) return;
-  el.style.background=color;
-  el.title=title||'';
-}
+function setDot(){}   // status dot removed from the header
 
 function fmtSteps(el){
   const raw = el.value.replace(/,/g,'');
@@ -701,7 +691,7 @@ function chartTap(e){
     document.body.appendChild(tip);
     tip.onclick=()=>tip.classList.add('hidden');
   }
-  tip.innerHTML='<span style="opacity:.6;font-size:12px">'+reg.labels[hit]+'</span><br>'+parts.join('<br>');
+  tip.innerHTML='<span style="opacity:.55;font-size:12px">'+reg.labels[hit]+'</span><br>'+parts.join('<br>');
   tip.classList.remove('hidden');
   const tw=140;
   let left=e.clientX-tw/2;
@@ -759,11 +749,25 @@ function renderCharts(){
     }
   }
   const bwAction='<button class="goal-btn" onclick="openGoalModal()">'+(goal?'Edit':'+ Goal')+'</button>';
-  const bwLegend=goal
-    ? '<span><i class="legend-swatch" style="border-top-color:#e85d40"></i>Actual</span>'
-      +'<span><i class="legend-swatch dash"></i>Target · '+goal.targetWeight.toFixed(1)+' kg by '
-      +fmtDate(goal.deadline)+' '+goal.deadline.slice(0,4)+'</span>'
-    : '';
+  // If a goal is set but the curve cannot be drawn, say why on the chart itself
+  // rather than rendering an empty space.
+  let bwLegend='';
+  if(goal){
+    const tgtPts=(bwTarget||[]).filter(v=>v!==null&&v!==undefined&&!isNaN(v)).length;
+    if(tgtPts>0){
+      bwLegend='<span><i class="legend-swatch" style="border-top-color:#e85d40"></i>Actual</span>'
+        +'<span><i class="legend-swatch dash"></i>Target · '+goal.targetWeight.toFixed(1)+' kg by '
+        +fmtDate(goal.deadline)+' '+goal.deadline.slice(0,4)+'</span>';
+    } else {
+      let why;
+      if(!isValidDate(goal.deadline))        why='the deadline ('+goal.deadline+') is not a readable date';
+      else if(goal.deadline<=todayStr())     why='the deadline ('+goal.deadline+') has already passed';
+      else if(!isValidDate(goal.createdDate))why='the start date ('+goal.createdDate+') is not a readable date';
+      else if(!isFinite(goal.startWeight))   why='the starting weight is missing';
+      else                                   why='no points were generated between '+goal.createdDate+' and '+goal.deadline;
+      bwLegend='<span style="color:#c0392b;font-weight:600;">Target curve not drawn — '+why+'.</span>';
+    }
+  }
   html+=buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70,null,
     {action:bwAction, titleExtra:statusPill, legend:bwLegend, targetData:bwTarget,
      todayIndex: goal ? bwDates.indexOf(todayStr()) : -1});
@@ -896,7 +900,6 @@ function computePerfectWeeks(){
 }
 
 function renderDashboard(){
-  document.getElementById('stat-week').textContent=computeWeek()+'/7';
   renderCharts();
 }
 
@@ -1070,6 +1073,7 @@ function curveExponent(){
 // are expected rather than read as failure. Lands exactly on target at the deadline.
 function targetWeightOn(dateStr){
   if(!goal || !isValidDate(goal.deadline) || !isValidDate(goal.createdDate)) return null;
+  if(!isFinite(goal.startWeight) || !isFinite(goal.targetWeight)) return null;
   const total = daysBetween(goal.createdDate, goal.deadline);
   if(total<=0) return goal.targetWeight;
   const elapsed = daysBetween(goal.createdDate, dateStr);
@@ -1214,7 +1218,7 @@ function saveGoal(){
              createdDate:todayStr(), startWeight:Math.round(cur*10)/10 };
       goal._k=curveExponent();
       closeGoalModal(); showToast(); updateTargetHints();
-      if(!document.getElementById('tab-dashboard').classList.contains('hidden')) renderDashboard();
+      renderDashboard();          // unconditional — the dashboard may be hidden right now
     })
     .catch(()=>alert('Could not save the goal. Check your connection and try again.'));
 }
@@ -1223,8 +1227,7 @@ function removeGoal(){
   fetch(API,{method:'POST',body:JSON.stringify({action:'deleteGoal'})})
     .then(r=>r.json())
     .then(()=>{
-      goal=null; closeGoalModal(); updateTargetHints();
-      if(!document.getElementById('tab-dashboard').classList.contains('hidden')) renderDashboard();
+      goal=null; closeGoalModal(); updateTargetHints(); renderDashboard();
     })
     .catch(()=>alert('Could not remove the goal.'));
 }
@@ -1252,7 +1255,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v48');
+  row('version','v49');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
