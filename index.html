@@ -85,6 +85,29 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .toast{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none;}
 .toast-inner{background:var(--accent);color:white;border-radius:16px;padding:18px 32px;font-size:17px;font-family:'Inter',sans-serif;font-weight:700;display:flex;align-items:center;gap:10px;}
 .hidden{display:none!important;}
+.chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
+.goal-btn{border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:20px;padding:5px 12px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.goal-btn:hover{background:var(--accent);color:#fff;}
+.chart-legend{display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+.chart-legend span{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);}
+.legend-swatch{display:inline-block;width:16px;height:0;border-top:3px solid;border-radius:2px;}
+.legend-swatch.dash{border-top-style:dashed;border-top-color:#4a9e6a;}
+.goal-summary{background:#fff5f3;border:1px solid #ffd9d0;border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.goal-summary .gs-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px;}
+.goal-summary .gs-title{font-size:13px;font-weight:600;color:var(--text);}
+.goal-summary .gs-status{font-size:12px;font-weight:600;}
+.goal-summary .gs-detail{font-size:12px;color:var(--text2);line-height:1.6;}
+.goal-warn{background:#fff8e6;border:1px solid #ffe0a3;border-radius:9px;padding:9px 11px;font-size:12px;color:#8a6100;line-height:1.5;margin-top:10px;}
+.target-hint{font-size:12px;color:var(--accent);font-weight:600;margin-top:5px;}
+.target-hint span{color:var(--text2);font-weight:400;}
+.rate-row{display:flex;gap:7px;}
+.rate-btn{flex:1;padding:10px 4px;border-radius:9px;border:1px solid var(--border);background:#fff;color:var(--muted);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;line-height:1.35;}
+.rate-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.rate-btn small{display:block;font-size:10px;font-weight:400;opacity:.85;}
+.modal-wide{max-width:360px;}
+.modal .field-lbl{font-size:11px;color:var(--muted);margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase;}
+.modal input[type=number],.modal input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Inter',sans-serif;background:var(--bg-input);color:var(--text);outline:none;-webkit-appearance:none;}
+.link-btn{background:none;border:none;color:var(--muted);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;}
 .confetti-piece{position:fixed;width:10px;height:10px;top:-10px;opacity:0;pointer-events:none;z-index:999;border-radius:2px;animation:confetti-fall linear forwards;}
 @keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(110vh) rotate(720deg);opacity:0;}}
 
@@ -146,8 +169,8 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           </div>
         </div>
         <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this);updateProgress()"/></div>
-        <div class="field"><div class="field-lbl">Bodyweight (kg)</div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()"/></div>
-        <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/></div>
+        <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()"/><div id="bw-target-hint"></div></div>
+        <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/><div id="cal-target-hint"></div></div>
         <div class="field">
           <div class="field-lbl">Sleep (h:mm)</div>
           <input type="text" id="sleep-txt" placeholder="e.g. 7:30" oninput="updateProgress()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;"/>
@@ -228,6 +251,37 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
     </div>
   </div>
   <div class="toast hidden" id="toast"><div class="toast-inner">✓ Entry saved!</div></div>
+
+  <div class="overlay hidden" id="goal-modal">
+    <div class="modal modal-wide">
+      <h3>Weight goal</h3>
+      <p style="margin-bottom:16px;">One goal at a time — saving replaces any existing goal.</p>
+      <div class="field" style="margin-bottom:14px;">
+        <div class="field-lbl">Target weight (kg)</div>
+        <input type="number" step="0.1" id="goal-weight" placeholder="62.0" oninput="previewGoal()"/>
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <div class="field-lbl">Deadline</div>
+        <input type="date" id="goal-deadline" onchange="previewGoal()"/>
+      </div>
+      <div class="field" style="margin-bottom:6px;">
+        <div class="field-lbl">Preferred rate</div>
+        <div class="rate-row">
+          <button class="rate-btn" id="rate-slow" onclick="setRate('slow')">Slow<small>0.5% / wk</small></button>
+          <button class="rate-btn active" id="rate-medium" onclick="setRate('medium')">Medium<small>1% / wk</small></button>
+          <button class="rate-btn" id="rate-aggressive" onclick="setRate('aggressive')">Aggressive<small>1.5% / wk</small></button>
+        </div>
+      </div>
+      <div id="goal-feedback"></div>
+      <div class="modal-btns" style="margin-top:18px;">
+        <button class="btn-sec" onclick="closeGoalModal()">Cancel</button>
+        <button class="btn-pri" onclick="saveGoal()">Save goal</button>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="link-btn" id="goal-remove" onclick="removeGoal()" style="display:none;">Remove current goal</button>
+      </div>
+    </div>
+  </div>
 
   <div class="overlay hidden" id="perfect-modal">
     <div class="modal">
@@ -376,6 +430,7 @@ function fillForm(e){
     if(!isNaN(sh)&&!isNaN(sm)) sleepVal=sh+':'+(sm<10?'0'+sm:String(sm));
   }
   document.getElementById('sleep-txt').value = sleepVal;
+  updateTargetHints();
 }
 function blankForm(date){
   fillForm({date,gym:false,supplements:false,vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
@@ -486,15 +541,19 @@ function weeklyStudyCalc(filtered){
 }
 
 // SVG Chart
-function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax){
+function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts){
+  opts = opts || {};
+  const tgt = opts.targetData || null;
   const W=500, H=300, PL=58, PR=18, PT=20, PB=36;
   const iW=W-PL-PR, iH=H-PT-PB;
   const nums=data.map(v=>{if(v===null||v===undefined||v==='') return null; const n=Number(v); return isNaN(n)?null:n;});
   const valid=nums.filter(v=>v!==null);
   if(!valid.length) return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="16" font-family="Lato,sans-serif">No data for this period</text></svg>';
-  const dMin=Math.min(...valid), dMax=Math.max(...valid), aR=(dMax-dMin)||1;
-  const yMin=yAxisMin!==undefined?yAxisMin:dMin-aR*.12;
-  const yMax=yAxisMax!==undefined?yAxisMax:dMax+aR*.12;
+  const tgtValid = tgt ? tgt.filter(v=>v!==null&&v!==undefined&&!isNaN(v)) : [];
+  const allVals = valid.concat(tgtValid);
+  const dMin=Math.min(...allVals), dMax=Math.max(...allVals), aR=(dMax-dMin)||1;
+  const yMin=yAxisMin!==undefined?Math.min(yAxisMin,dMin-aR*.08):dMin-aR*.12;
+  const yMax=yAxisMax!==undefined?Math.max(yAxisMax,dMax+aR*.08):dMax+aR*.12;
   const yR=yMax-yMin||1;
   const toX=i=>PL+(i/Math.max(nums.length-1,1))*iW;
   const toY=v=>PT+iH-((Math.min(Math.max(v,yMin),yMax)-yMin)/yR)*iH;
@@ -523,6 +582,13 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax){
     else{seg.forEach(([x,y],i)=>{lp+=i===0?'M'+x+','+y:'L'+x+','+y;});}
     if(seg.length>1){fp+='M'+seg[0][0]+','+(PT+iH)+' ';seg.forEach(([x,y])=>{fp+='L'+x+','+y+' ';});fp+='L'+seg[seg.length-1][0]+','+(PT+iH)+' Z ';}
   });
+  // Target curve path
+  let tp='';
+  if(tgt){
+    const tpts=tgt.map((v,i)=>(v===null||v===undefined||isNaN(v))?null:[toX(i),toY(v)]);
+    let started=false;
+    tpts.forEach(p=>{ if(!p) return; tp += (started?'L':'M')+p[0]+','+p[1]; started=true; });
+  }
   // Latest pill positioning
   const pW=80,pH=24;
   let px=lx!==null?lx-pW/2:0;
@@ -539,6 +605,8 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax){
     +xlbls.filter(l=>l.show).map(l=>'<text x="'+l.x+'" y="'+(H-8)+'" text-anchor="middle" font-size="13" fill="#bbbbbb">'+l.l+'</text>').join('')
     // Fill area
     +(fp?'<path d="'+fp+'" fill="'+color+'" fill-opacity="0.1"/>':'')
+    // Target curve — dashed, behind the real line
+    +(tp?'<path d="'+tp+'" fill="none" stroke="#4a9e6a" stroke-width="2.5" stroke-dasharray="6,5" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>':'')
     // Line — thicker
     +(lp?'<path d="'+lp+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>':'')
     // Avg line + pill
@@ -555,21 +623,38 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax){
     :'')
     +'</svg>';
 }
-function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, pills){
+function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, pills, opts){
+  opts = opts || {};
+  const head = opts.action
+    ? `<div class="chart-head"><div class="chart-ttl" style="margin-bottom:0">${title}</div>${opts.action}</div>`
+    : `<div class="chart-ttl">${title}</div>`;
+  const legend = opts.legend ? `<div class="chart-legend">${opts.legend}</div>` : '';
   return `<div class="chart-card">
-    <div class="chart-ttl">${title}</div>
+    ${head}
+    ${legend}
     ${pills||''}
-    ${makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax)}
+    ${makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts)}
   </div>`;
 }
 
 function renderCharts(){
   const filtered=getFiltered();
-  let html='';
+  let html=goalSummaryHTML();
   // Bodyweight — daily, 1 decimal
   const bwLabels=filtered.map(e=>fmtDate(e.date));
   const bwData=filtered.map(e=>e.bodyweight?parseFloat(e.bodyweight):null);
-  html+=buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70);
+  const bwTarget = goal ? filtered.map(e=>{
+    // Only draw the curve from the day the goal was set onwards
+    if(e.date < goal.createdDate) return null;
+    return targetWeightOn(e.date);
+  }) : null;
+  const bwAction = '<button class="goal-btn" onclick="openGoalModal()">'+(goal?'Edit goal':'+ Goal')+'</button>';
+  const bwLegend = goal
+    ? '<span><i class="legend-swatch" style="border-top-color:#e85d40"></i>Actual</span>'
+      +'<span><i class="legend-swatch dash"></i>Target</span>'
+    : '';
+  html+=buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70,null,
+    {action:bwAction, legend:bwLegend, targetData:bwTarget});
   // Gym sessions — weekly sum
   const gymWks={};
   filtered.forEach(e=>{
@@ -584,7 +669,14 @@ function renderCharts(){
   html+=buildChart('Weekly steps',st.labels,st.data,'#e85d40','#,##0','#,##0');
   // Calories — weekly avg
   const ca=weeklyAvgData(filtered,'calories',parseInt);
-  html+=buildChart('Weekly calories',ca.labels,ca.data,'#e85d40','#,##0','#,##0',1000,3000);
+  const ct=goal?calorieTarget():null;
+  const calTarget=(ct&&ct.target)?ca.labels.map(()=>ct.target):null;
+  const calLegend=calTarget
+    ? '<span><i class="legend-swatch" style="border-top-color:#e85d40"></i>Actual</span>'
+      +'<span><i class="legend-swatch dash"></i>Target '+ct.target.toLocaleString()+' kcal</span>'
+    : '';
+  html+=buildChart('Weekly calories',ca.labels,ca.data,'#e85d40','#,##0','#,##0',1000,3000,null,
+    {legend:calLegend, targetData:calTarget});
   // Vitality — weekly sum
   const vi=weeklySumData(filtered,'vitalityPoints',parseInt,40);
   html+=buildChart('Weekly vitality points',vi.labels,vi.data,'#e85d40','#,##0','#,##0',12,40);
@@ -768,6 +860,312 @@ function launchConfetti(){
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   WEIGHT GOAL — storage, energy-balance maths, projection
+   ══════════════════════════════════════════════════════════ */
+
+const KCAL_PER_KG = 7700;            // energy density of body tissue lost
+const RATE_PCT = { slow:0.005, medium:0.010, aggressive:0.015 };  // of bodyweight per week
+let goal = null;
+let pendingRate = 'medium';
+
+function daysBetween(a,b){
+  return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+}
+function addDays(dateStr,n){
+  const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+n);
+  return d.toISOString().split('T')[0];
+}
+
+// Trailing average bodyweight — daily readings are noisy (water, food, timing)
+function smoothWeight(dateStr, win){
+  win = win || 7;
+  const from = addDays(dateStr, -(win-1));
+  const vals = entries
+    .filter(e => e.date>=from && e.date<=dateStr && e.bodyweight)
+    .map(e => parseFloat(e.bodyweight))
+    .filter(v => !isNaN(v));
+  if(!vals.length) return null;
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+
+function latestWeight(){
+  const withBw = entries.filter(e=>e.bodyweight).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!withBw.length) return null;
+  return smoothWeight(withBw[0].date) || parseFloat(withBw[0].bodyweight);
+}
+
+// Least-squares slope of y against index, returns units per step
+function slopeOf(pts){
+  const n=pts.length;
+  if(n<3) return null;
+  const sx=pts.reduce((a,p)=>a+p[0],0), sy=pts.reduce((a,p)=>a+p[1],0);
+  const sxy=pts.reduce((a,p)=>a+p[0]*p[1],0), sxx=pts.reduce((a,p)=>a+p[0]*p[0],0);
+  const den=n*sxx-sx*sx;
+  if(!den) return null;
+  return (n*sxy-sx*sy)/den;
+}
+
+// TDEE = mean intake − (kg/day change × kcal/kg).
+// Losing weight ⇒ negative slope ⇒ TDEE above intake. This is measured from
+// your own data, so it already absorbs your activity level and metabolism.
+function estimateTDEE(){
+  const win = entries
+    .filter(e=>e.bodyweight&&e.calories)
+    .sort((a,b)=>a.date.localeCompare(b.date))
+    .slice(-42);
+  if(win.length<14) return null;
+  const cals = win.map(e=>parseInt(e.calories)).filter(v=>!isNaN(v)&&v>0);
+  if(cals.length<10) return null;
+  const meanCal = cals.reduce((a,b)=>a+b,0)/cals.length;
+  const pts = win.map((e,i)=>[i,parseFloat(e.bodyweight)]).filter(p=>!isNaN(p[1]));
+  const slope = slopeOf(pts);
+  if(slope===null) return null;
+  const tdee = meanCal - slope*KCAL_PER_KG;
+  // Sanity clamp — bad data shouldn't produce an absurd target
+  if(tdee < 1200 || tdee > 5000) return Math.round(Math.min(Math.max(tdee,1200),5000));
+  return Math.round(tdee);
+}
+
+// How front-loaded is this person's weight loss? Fitted against the curve
+// f(p) = 1−(1−p)^k, then blended 50/50 with the physiological prior of 1.2
+// (early loss runs ahead of trend on glycogen and water, then adaptive
+// thermogenesis flattens it).
+function curveExponent(){
+  const PRIOR = 1.2;
+  const withBw = entries.filter(e=>e.bodyweight).sort((a,b)=>a.date.localeCompare(b.date));
+  if(withBw.length<40) return PRIOR;
+  let best=null;
+  for(let start=0; start<withBw.length-28; start++){
+    for(let len=56; len>=28; len-=14){
+      if(start+len>=withBw.length) continue;
+      const seg = withBw.slice(start,start+len);
+      const w0=parseFloat(seg[0].bodyweight), w1=parseFloat(seg[seg.length-1].bodyweight);
+      if(isNaN(w0)||isNaN(w1)) continue;
+      const total=w0-w1;
+      if(total<1.0) continue;                    // need a real loss episode
+      const mid=seg[Math.floor(seg.length/2)];
+      const wm=parseFloat(mid.bodyweight);
+      if(isNaN(wm)) continue;
+      const frac=(w0-wm)/total;                  // share of loss done by halfway
+      if(frac<=0.05||frac>=0.95) continue;
+      if(!best||total>best.total) best={frac,total};
+    }
+  }
+  if(!best) return PRIOR;
+  let k = Math.log(1-best.frac)/Math.log(0.5);
+  k = Math.min(Math.max(k,1.0),1.8);
+  return 0.5*k + 0.5*PRIOR;
+}
+
+// Target weight on a given date. Not a straight line: front-loaded by the
+// fitted exponent, with a decaying ripple so plateaus and small rebounds
+// are expected rather than read as failure. Lands exactly on target at the deadline.
+function targetWeightOn(dateStr){
+  if(!goal) return null;
+  const total = daysBetween(goal.createdDate, goal.deadline);
+  if(total<=0) return goal.targetWeight;
+  const elapsed = daysBetween(goal.createdDate, dateStr);
+  if(elapsed<=0) return goal.startWeight;
+  if(elapsed>=total) return goal.targetWeight;
+  const p = elapsed/total;
+  const k = goal._k || 1.2;
+  const base = 1 - Math.pow(1-p, k);
+  const weeks = total/7;
+  const cycles = Math.max(1, weeks/3.5);          // a plateau rhythm every ~3.5 weeks
+  const wobble = 0.045 * Math.sin(p*Math.PI*2*cycles) * (1-p);
+  const f = Math.min(Math.max(base+wobble,0),1);
+  return goal.startWeight - (goal.startWeight-goal.targetWeight)*f;
+}
+
+// Rolling calorie target. Recomputed from where you actually are today, so
+// a heavy weekend tightens tomorrow rather than being written off.
+function calorieTarget(){
+  if(!goal) return null;
+  const tdee = estimateTDEE();
+  if(!tdee) return { tdee:null, target:null, reason:'not enough data' };
+  const today = todayStr();
+  const cur = smoothWeight(today,10) || latestWeight();
+  if(!cur) return { tdee, target:null, reason:'no bodyweight data' };
+  const daysLeft = daysBetween(today, goal.deadline);
+  const remaining = cur - goal.targetWeight;
+
+  if(daysLeft<=0 || remaining<=0){
+    return { tdee, target:tdee, deficit:0, cur, daysLeft, remaining,
+             maintenance:true, onTrack:remaining<=0 };
+  }
+
+  const required = remaining*KCAL_PER_KG/daysLeft;
+  const maxWeekly = cur * (RATE_PCT[goal.rate]||RATE_PCT.medium);
+  const maxDeficit = maxWeekly*KCAL_PER_KG/7;
+  const deficit = Math.min(required, maxDeficit);
+  // Never prescribe below ~65% of maintenance, and never below 1500 kcal
+  const floor = Math.max(1500, Math.round(tdee*0.65));
+  const target = Math.max(Math.round(tdee - deficit), floor);
+  return {
+    tdee, target, cur, daysLeft, remaining,
+    deficit: Math.round(tdee-target),
+    required: Math.round(required),
+    maxDeficit: Math.round(maxDeficit),
+    rateLimited: required > maxDeficit,
+    steep: (tdee-target) > 750,
+    floored: Math.round(tdee-deficit) < floor
+  };
+}
+
+/* ── Goal storage ───────────────────────────────────────── */
+
+function loadGoal(){
+  return fetch(API+'?action=getGoal',{cache:'no-store'})
+    .then(r=>r.json())
+    .then(d=>{
+      goal = d.goal || null;
+      if(goal) goal._k = curveExponent();
+      return goal;
+    })
+    .catch(()=>{ goal=null; return null; });
+}
+
+function openGoalModal(){
+  document.getElementById('goal-modal').classList.remove('hidden');
+  const rm=document.getElementById('goal-remove');
+  if(goal){
+    document.getElementById('goal-weight').value = goal.targetWeight;
+    document.getElementById('goal-deadline').value = goal.deadline;
+    setRate(goal.rate);
+    rm.style.display='inline';
+  } else {
+    document.getElementById('goal-weight').value='';
+    document.getElementById('goal-deadline').value=addDays(todayStr(),84);
+    setRate('medium');
+    rm.style.display='none';
+  }
+  previewGoal();
+}
+function closeGoalModal(){ document.getElementById('goal-modal').classList.add('hidden'); }
+function setRate(r){
+  pendingRate=r;
+  ['slow','medium','aggressive'].forEach(x=>{
+    document.getElementById('rate-'+x).classList.toggle('active',x===r);
+  });
+  previewGoal();
+}
+
+// Live sanity check while the goal is being entered
+function previewGoal(){
+  const box=document.getElementById('goal-feedback');
+  if(!box) return;
+  const tw=parseFloat(document.getElementById('goal-weight').value);
+  const dl=document.getElementById('goal-deadline').value;
+  const cur=latestWeight();
+  if(!tw||!dl||!cur){ box.innerHTML=''; return; }
+  const days=daysBetween(todayStr(),dl);
+  if(days<=0){ box.innerHTML='<div class="goal-warn">The deadline needs to be in the future.</div>'; return; }
+  const loss=cur-tw;
+  if(loss<=0){ box.innerHTML='<div class="goal-warn">That target is at or above your current weight, so no deficit is needed.</div>'; return; }
+  const perWeek=loss/(days/7);
+  const tdee=estimateTDEE();
+  const requiredDeficit=Math.round(loss*KCAL_PER_KG/days);
+  const maxWeekly=cur*RATE_PCT[pendingRate];
+  let msg='<div class="goal-warn" style="background:#f5f9f6;border-color:#cde8d6;color:#2f6a45;">'
+    +'Needs about <strong>'+perWeek.toFixed(2)+' kg/week</strong>'
+    +(tdee?' — roughly <strong>'+requiredDeficit.toLocaleString()+' kcal/day</strong> below your estimated maintenance of '+tdee.toLocaleString()+'.':'.')
+    +'</div>';
+  if(perWeek > maxWeekly*1.02){
+    msg='<div class="goal-warn">This deadline needs <strong>'+perWeek.toFixed(2)+' kg/week</strong>, faster than '
+      +pendingRate+' ('+maxWeekly.toFixed(2)+' kg/week). The app will hold you to the '+pendingRate
+      +' rate, so you would reach the target after the deadline. Push the date out or pick a faster rate.</div>';
+  } else if(requiredDeficit>750){
+    msg='<div class="goal-warn">That works out to about <strong>'+requiredDeficit.toLocaleString()+' kcal/day</strong> below maintenance. '
+      +'Deficits past ~750 tend to cost strength in the gym and get hard to hold. A later deadline would be gentler.</div>';
+  }
+  box.innerHTML=msg;
+}
+
+function saveGoal(){
+  const tw=parseFloat(document.getElementById('goal-weight').value);
+  const dl=document.getElementById('goal-deadline').value;
+  if(!tw||!dl){ alert('Enter a target weight and a deadline.'); return; }
+  const cur=latestWeight();
+  if(!cur){ alert('Log a bodyweight first so the goal has a starting point.'); return; }
+  const payload={ action:'saveGoal', targetWeight:tw, deadline:dl, rate:pendingRate,
+                  createdDate:todayStr(), startWeight:Math.round(cur*10)/10 };
+  fetch(API,{method:'POST',body:JSON.stringify(payload)})
+    .then(r=>r.json())
+    .then(()=>{
+      goal={ targetWeight:tw, deadline:dl, rate:pendingRate,
+             createdDate:todayStr(), startWeight:Math.round(cur*10)/10 };
+      goal._k=curveExponent();
+      closeGoalModal(); showToast(); updateTargetHints();
+      if(!document.getElementById('tab-dashboard').classList.contains('hidden')) renderDashboard();
+    })
+    .catch(()=>alert('Could not save the goal. Check your connection and try again.'));
+}
+
+function removeGoal(){
+  fetch(API,{method:'POST',body:JSON.stringify({action:'deleteGoal'})})
+    .then(r=>r.json())
+    .then(()=>{
+      goal=null; closeGoalModal(); updateTargetHints();
+      if(!document.getElementById('tab-dashboard').classList.contains('hidden')) renderDashboard();
+    })
+    .catch(()=>alert('Could not remove the goal.'));
+}
+
+/* ── Log tab hints ──────────────────────────────────────── */
+
+function updateTargetHints(){
+  const bwBox=document.getElementById('bw-target-hint');
+  const calBox=document.getElementById('cal-target-hint');
+  if(!bwBox||!calBox) return;
+  if(!goal){ bwBox.innerHTML=''; calBox.innerHTML=''; return; }
+  const d=document.getElementById('entry-date').value||todayStr();
+  const tw=targetWeightOn(d);
+  bwBox.innerHTML = tw!==null
+    ? '<div class="target-hint">Target '+tw.toFixed(1)+' kg <span>· goal '+goal.targetWeight.toFixed(1)+' kg by '+fmtDate(goal.deadline)+'</span></div>'
+    : '';
+  const ct=calorieTarget();
+  if(!ct||!ct.target){
+    calBox.innerHTML='<div class="target-hint"><span>Not enough calorie history yet to set a target.</span></div>';
+  } else if(ct.maintenance){
+    calBox.innerHTML='<div class="target-hint">Target '+ct.target.toLocaleString()+' kcal <span>· maintenance</span></div>';
+  } else {
+    calBox.innerHTML='<div class="target-hint">Target '+ct.target.toLocaleString()+' kcal <span>· '
+      +ct.deficit.toLocaleString()+' below your '+ct.tdee.toLocaleString()+' maintenance</span></div>';
+  }
+}
+
+/* ── Dashboard goal card ────────────────────────────────── */
+
+function goalSummaryHTML(){
+  if(!goal) return '';
+  const today=todayStr();
+  const cur=smoothWeight(today,10)||latestWeight();
+  const tw=targetWeightOn(today);
+  if(cur===null||tw===null) return '';
+  const gap=cur-tw;
+  const ahead=gap<=0;
+  const status=Math.abs(gap)<0.15
+    ? '<span class="gs-status" style="color:#4a9e6a;">On track</span>'
+    : ahead
+      ? '<span class="gs-status" style="color:#4a9e6a;">'+Math.abs(gap).toFixed(1)+' kg ahead</span>'
+      : '<span class="gs-status" style="color:#e85d40;">'+gap.toFixed(1)+' kg behind</span>';
+  const daysLeft=daysBetween(today,goal.deadline);
+  const ct=calorieTarget();
+  let line2='Now '+cur.toFixed(1)+' kg · curve says '+tw.toFixed(1)+' kg · '
+    +(daysLeft>0?daysLeft+' days to go':'deadline passed');
+  if(ct&&ct.target&&!ct.maintenance) line2+=' · eat '+ct.target.toLocaleString()+' kcal';
+  let warn='';
+  if(ct&&ct.rateLimited) warn='<div class="goal-warn">Hitting '+goal.targetWeight.toFixed(1)
+    +' kg by '+fmtDate(goal.deadline)+' would need more than your '+goal.rate
+    +' rate allows, so the target is capped there. Expect to land slightly after the deadline.</div>';
+  else if(ct&&ct.steep) warn='<div class="goal-warn">This is a '+ct.deficit.toLocaleString()
+    +' kcal daily deficit. Sustainable for a while, but watch your gym numbers — if the lifts start dropping, ease the deadline out.</div>';
+  return '<div class="goal-summary"><div class="gs-top"><div class="gs-title">Goal: '
+    +goal.targetWeight.toFixed(1)+' kg by '+fmtDate(goal.deadline)+'</div>'+status+'</div>'
+    +'<div class="gs-detail">'+line2+'</div>'+warn+'</div>';
+}
+
 // Init — load from Sheets with retry
 document.getElementById('entry-date').value=todayStr();
 blankForm(todayStr());
@@ -782,7 +1180,7 @@ function loadData(attempt){
       const today=entries.find(e=>e.date===todayStr());
       if(today) fillForm(today); else blankForm(todayStr());
       setDot('#e85d40');
-      renderDashboard();
+      loadGoal().then(()=>{ updateTargetHints(); renderDashboard(); });
     })
     .catch(err=>{
       if(attempt<3){
