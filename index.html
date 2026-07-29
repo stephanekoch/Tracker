@@ -128,7 +128,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;">· v44</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v45</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
         <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
@@ -255,6 +255,18 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
     </div>
   </div>
   <div class="toast hidden" id="toast"><div class="toast-inner">✓ Entry saved!</div></div>
+
+  <div class="overlay hidden" id="diag-modal">
+    <div class="modal modal-wide">
+      <h3 style="margin-bottom:12px;">Diagnostics</h3>
+      <div id="diag-body" style="font-size:12px;line-height:1.8;color:var(--text2);
+        font-family:ui-monospace,Menlo,monospace;max-height:56vh;overflow-y:auto;
+        background:#fafafa;border:1px solid #eee;border-radius:9px;padding:11px;"></div>
+      <div class="modal-btns" style="margin-top:14px;">
+        <button class="btn-pri" onclick="document.getElementById('diag-modal').classList.add('hidden')">Close</button>
+      </div>
+    </div>
+  </div>
 
   <div class="overlay hidden" id="goal-modal">
     <div class="modal modal-wide">
@@ -551,8 +563,11 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
   const iW=W-PL-PR, iH=H-PT-PB;
   const nums=data.map(v=>{if(v===null||v===undefined||v==='') return null; const n=Number(v); return isNaN(n)?null:n;});
   const valid=nums.filter(v=>v!==null);
-  if(!valid.length) return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="16" font-family="Lato,sans-serif">No data for this period</text></svg>';
   const tgtValid = tgt ? tgt.filter(v=>v!==null&&v!==undefined&&!isNaN(v)) : [];
+  // Bail only if there is nothing at all to draw. A target curve is still worth
+  // showing when the selected range happens to contain no readings.
+  if(!valid.length && !tgtValid.length)
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="16" font-family="Inter,sans-serif">No data for this period</text></svg>';
   const allVals = valid.concat(tgtValid);
   const dMin=Math.min(...allVals), dMax=Math.max(...allVals), aR=(dMax-dMin)||1;
   const yMin=yAxisMin!==undefined?Math.min(yAxisMin,dMin-aR*.08):dMin-aR*.12;
@@ -561,7 +576,7 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
   const toX=i=>PL+(i/Math.max(nums.length-1,1))*iW;
   const toY=v=>PT+iH-((Math.min(Math.max(v,yMin),yMax)-yMin)/yR)*iH;
   // Avg
-  const avg=avgFmt?valid.reduce((a,b)=>a+b,0)/valid.length:null;
+  const avg=(avgFmt&&valid.length)?valid.reduce((a,b)=>a+b,0)/valid.length:null;
   const avgY=avg!==null?toY(avg):null;
   const avgLbl=avg!==null?'Avg: '+fmtV(avg,avgFmt):null;
   // Latest
@@ -1170,6 +1185,41 @@ function updateTargetHints(){
 }
 
 /* ── Dashboard goal card ────────────────────────────────── */
+
+function showDiag(){
+  const L=[];
+  const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
+  const bw=entries.filter(e=>e.bodyweight);
+  row('version','v45');
+  row('today',todayStr());
+  row('entries loaded',entries.length);
+  row('with bodyweight',bw.length);
+  if(bw.length){
+    row('first reading',bw[0].date);
+    row('last reading','<span style="color:'+((daysBetween(bw[bw.length-1].date,todayStr())>14)?'#c0392b':'#4a9e6a')+'">'
+      +bw[bw.length-1].date+' ('+daysBetween(bw[bw.length-1].date,todayStr())+' days ago)</span>');
+  }
+  row('range selected',rangeDays+' days');
+  const f=getFiltered();
+  const fbw=f.filter(e=>e.bodyweight).length;
+  row('entries in range',f.length);
+  row('readings in range','<span style="color:'+(fbw?'#4a9e6a':'#c0392b')+'">'+fbw+(fbw?'':' — nothing to plot')+'</span>');
+  L.push('<hr style="border:0;border-top:1px solid #e5e5e5;margin:8px 0">');
+  if(!goal){ row('goal','<span style="color:#c0392b">none loaded</span>'); }
+  else{
+    row('goal target',goal.targetWeight+' kg');
+    row('goal deadline',goal.deadline+(isValidDate(goal.deadline)?' <span style="color:#4a9e6a">valid</span>':' <span style="color:#c0392b">INVALID</span>'));
+    row('goal created',goal.createdDate+(isValidDate(goal.createdDate)?' <span style="color:#4a9e6a">valid</span>':' <span style="color:#c0392b">INVALID</span>'));
+    row('deadline in future',(goal.deadline>todayStr())?'<span style="color:#4a9e6a">yes</span>':'<span style="color:#c0392b">no</span>');
+    let n=0,d=todayStr(),g=0;
+    while(d<goal.deadline&&g++<730){d=addDays(d,1);n++;}
+    row('future points',n);
+    const t=targetWeightOn(todayStr());
+    row('target today',t===null?'<span style="color:#c0392b">null</span>':t.toFixed(2)+' kg');
+  }
+  document.getElementById('diag-body').innerHTML=L.join('');
+  document.getElementById('diag-modal').classList.remove('hidden');
+}
 
 // Init — load from Sheets with retry
 document.getElementById('entry-date').value=todayStr();
