@@ -91,7 +91,12 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
 .goal-btn{border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:20px;padding:6px 13px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .goal-btn:hover{background:var(--accent);color:#fff;}
-.status-pill{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.status-pill{font-size:12px;font-weight:600;padding:4px 6px 4px 10px;border-radius:20px;
+  white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+.pill-info{width:17px;height:17px;border-radius:50%;border:1.3px solid currentColor;background:transparent;
+  color:inherit;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;line-height:1;cursor:pointer;
+  padding:0;display:inline-flex;align-items:center;justify-content:center;opacity:.75;}
+.pill-info:hover{opacity:1;}
 .chart-legend{display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
 .chart-legend span{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);}
 .legend-swatch{display:inline-block;width:16px;height:0;border-top:3px solid;border-radius:2px;}
@@ -136,7 +141,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v52</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v54</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
@@ -257,6 +262,17 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
     </div>
   </div>
   <div class="toast hidden" id="toast"><div class="toast-inner">✓ Entry saved!</div></div>
+
+  <div class="overlay hidden" id="status-modal">
+    <div class="modal modal-wide">
+      <h3 style="margin-bottom:12px;">How this is worked out</h3>
+      <div id="status-body" style="font-size:14px;line-height:1.6;color:var(--text2);
+        max-height:60vh;overflow-y:auto;"></div>
+      <div class="modal-btns" style="margin-top:14px;">
+        <button class="btn-pri" onclick="document.getElementById('status-modal').classList.add('hidden')">Close</button>
+      </div>
+    </div>
+  </div>
 
   <div class="overlay hidden" id="diag-modal">
     <div class="modal modal-wide">
@@ -757,19 +773,17 @@ function renderCharts(){
     }
   }
 
-  // Status pill — how you sit against the curve today
+  // Status pill — latest reading against the 7-day mean of the target curve
   let statusPill='';
-  if(goal){
-    const cur=smoothWeight(todayStr(),10)||latestWeight();
-    const should=targetWeightOn(todayStr());
-    if(cur!==null&&should!==null){
-      const gap=cur-should;
-      statusPill = Math.abs(gap)<0.15
-        ? '<span class="status-pill" style="background:#eaf6ee;color:#2f6a45;">On track</span>'
-        : gap<0
-          ? '<span class="status-pill" style="background:#eaf6ee;color:#2f6a45;">'+Math.abs(gap).toFixed(1)+' kg ahead</span>'
-          : '<span class="status-pill" style="background:#fdecea;color:#c0392b;">'+gap.toFixed(1)+' kg behind</span>';
-    }
+  const stStatus=statusState();
+  if(stStatus){
+    const g=stStatus.gap;
+    const label = Math.abs(g)<0.15 ? 'On track'
+      : g<0 ? Math.abs(g).toFixed(1)+' kg ahead'
+            : g.toFixed(1)+' kg behind';
+    const bg = g>0.15 ? 'background:#fdecea;color:#c0392b;' : 'background:#eaf6ee;color:#2f6a45;';
+    statusPill = '<span class="status-pill" style="'+bg+'">'+label
+      +'<button class="pill-info" onclick="event.stopPropagation();showStatusInfo()" title="How this is worked out">i</button></span>';
   }
   const bwAction='<button class="goal-btn" onclick="openGoalModal()">'+(goal?'Edit':'+ Goal')+'</button>';
   // If a goal is set but the curve cannot be drawn, say why on the chart itself
@@ -1145,6 +1159,43 @@ function projectedFinish(){
   return { date: addDays(todayStr(), days), days };
 }
 
+// Mean of the target curve across the N days ending on endDate. Never reaches
+// back before the goal existed, so early on it averages fewer days.
+function targetAvgWindow(endDate, days){
+  days = days || 7;
+  const vals=[], used=[];
+  for(let i=0;i<days;i++){
+    const d=addDays(endDate,-i);
+    if(goal && d<goal.createdDate) break;
+    const t=targetWeightOn(d);
+    if(t===null) break;
+    vals.push(t); used.push({date:d,target:t});
+  }
+  if(!vals.length) return null;
+  used.reverse();
+  return { avg: vals.reduce((a,b)=>a+b,0)/vals.length, n: vals.length,
+           from: used[0].date, to: used[used.length-1].date, used: used };
+}
+
+// The reading the status is judged on: most recent logged weight since the goal began
+function latestReading(){
+  if(!goal) return null;
+  const l=entries.filter(e=>e.bodyweight&&e.date>=goal.createdDate)
+                 .sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if(!l) return null;
+  const v=parseFloat(l.bodyweight);
+  return isFinite(v)?{date:l.date,weight:v}:null;
+}
+
+function statusState(){
+  if(!goal) return null;
+  const r=latestReading();
+  if(!r) return null;
+  const win=targetAvgWindow(r.date,7);
+  if(!win) return null;
+  return { reading:r, win:win, gap:r.weight-win.avg };
+}
+
 /* ── Goal storage ───────────────────────────────────────── */
 
 function loadGoal(){
@@ -1285,11 +1336,49 @@ function updateTargetHints(){
 
 /* ── Dashboard goal card ────────────────────────────────── */
 
+function showStatusInfo(){
+  const st=statusState();
+  const box=document.getElementById('status-body');
+  if(!st){ box.innerHTML='<p>No goal or no bodyweight logged since the goal began.</p>'; }
+  else{
+    const w=st.win, r=st.reading, g=st.gap;
+    const verdict = Math.abs(g)<0.15 ? 'on track'
+      : g<0 ? Math.abs(g).toFixed(1)+' kg ahead of plan'
+            : g.toFixed(1)+' kg behind plan';
+    const rows=w.used.map(u=>'<tr><td style="padding:2px 10px 2px 0;color:var(--muted);">'
+      +fmtDate(u.date)+'</td><td style="padding:2px 0;text-align:right;font-variant-numeric:tabular-nums;">'
+      +u.target.toFixed(2)+' kg</td></tr>').join('');
+    box.innerHTML=
+      '<p style="margin-bottom:12px;"><b style="color:var(--text);">Your latest reading</b><br>'
+      +'<span style="font-size:19px;color:var(--accent);font-weight:600;">'+r.weight.toFixed(1)+' kg</span> '
+      +'logged '+(r.date===todayStr()?'today':'on '+fmtDate(r.date))+'.</p>'
+
+      +'<p style="margin-bottom:6px;"><b style="color:var(--text);">Target average</b><br>'
+      +'The mean of the target curve across the '+w.n+' day'+(w.n===1?'':'s')+' ending '
+      +fmtDate(w.to)+(w.n>1?' (from '+fmtDate(w.from)+')':'')+':</p>'
+      +'<table style="width:100%;font-size:13px;margin-bottom:6px;">'+rows+'</table>'
+      +'<p style="margin-bottom:12px;padding-top:6px;border-top:1px solid #eee;">'
+      +'Average: <b style="color:var(--text);">'+w.avg.toFixed(2)+' kg</b></p>'
+
+      +'<p style="margin-bottom:14px;"><b style="color:var(--text);">The comparison</b><br>'
+      +r.weight.toFixed(1)+' − '+w.avg.toFixed(2)+' = <b style="color:'+(g>0.15?'#c0392b':'#2f6a45')+'">'
+      +(g>0?'+':'')+g.toFixed(2)+' kg</b>, so you are '+verdict+'. '
+      +'Anything within 0.15 kg counts as on track.</p>'
+
+      +'<p style="font-size:13px;color:var(--muted);border-top:1px solid #eee;padding-top:11px;">'
+      +'Worth knowing: the target curve is already smooth, so averaging it does not cancel out '
+      +'day-to-day noise — that noise sits in your reading, not the target. What the average does '
+      +'is shift the comparison point back a few days, which makes the status slightly more forgiving '
+      +'than measuring against today alone.</p>';
+  }
+  document.getElementById('status-modal').classList.remove('hidden');
+}
+
 function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v52');
+  row('version','v54');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
