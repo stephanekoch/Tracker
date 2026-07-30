@@ -141,7 +141,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v54</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v55</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
@@ -1341,10 +1341,7 @@ function showStatusInfo(){
   const box=document.getElementById('status-body');
   if(!st){ box.innerHTML='<p>No goal or no bodyweight logged since the goal began.</p>'; }
   else{
-    const w=st.win, r=st.reading, g=st.gap;
-    const verdict = Math.abs(g)<0.15 ? 'on track'
-      : g<0 ? Math.abs(g).toFixed(1)+' kg ahead of plan'
-            : g.toFixed(1)+' kg behind plan';
+    const w=st.win, r=st.reading;
     const rows=w.used.map(u=>'<tr><td style="padding:2px 10px 2px 0;color:var(--muted);">'
       +fmtDate(u.date)+'</td><td style="padding:2px 0;text-align:right;font-variant-numeric:tabular-nums;">'
       +u.target.toFixed(2)+' kg</td></tr>').join('');
@@ -1357,19 +1354,8 @@ function showStatusInfo(){
       +'The mean of the target curve across the '+w.n+' day'+(w.n===1?'':'s')+' ending '
       +fmtDate(w.to)+(w.n>1?' (from '+fmtDate(w.from)+')':'')+':</p>'
       +'<table style="width:100%;font-size:13px;margin-bottom:6px;">'+rows+'</table>'
-      +'<p style="margin-bottom:12px;padding-top:6px;border-top:1px solid #eee;">'
-      +'Average: <b style="color:var(--text);">'+w.avg.toFixed(2)+' kg</b></p>'
-
-      +'<p style="margin-bottom:14px;"><b style="color:var(--text);">The comparison</b><br>'
-      +r.weight.toFixed(1)+' − '+w.avg.toFixed(2)+' = <b style="color:'+(g>0.15?'#c0392b':'#2f6a45')+'">'
-      +(g>0?'+':'')+g.toFixed(2)+' kg</b>, so you are '+verdict+'. '
-      +'Anything within 0.15 kg counts as on track.</p>'
-
-      +'<p style="font-size:13px;color:var(--muted);border-top:1px solid #eee;padding-top:11px;">'
-      +'Worth knowing: the target curve is already smooth, so averaging it does not cancel out '
-      +'day-to-day noise — that noise sits in your reading, not the target. What the average does '
-      +'is shift the comparison point back a few days, which makes the status slightly more forgiving '
-      +'than measuring against today alone.</p>';
+      +'<p style="padding-top:6px;border-top:1px solid #eee;">'
+      +'Average: <b style="color:var(--text);">'+w.avg.toFixed(2)+' kg</b></p>';
   }
   document.getElementById('status-modal').classList.remove('hidden');
 }
@@ -1378,7 +1364,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v54');
+  row('version','v55');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
