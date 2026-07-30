@@ -136,7 +136,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v51</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v52</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
@@ -1289,7 +1289,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v51');
+  row('version','v52');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
