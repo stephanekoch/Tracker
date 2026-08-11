@@ -46,9 +46,20 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .thumb{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.15);}
 .tgl-lbl{font-size:17px;color:var(--text);}
 .tgl-sub{font-size:12px;color:var(--muted);margin-top:2px;}
-.vit-row{display:flex;gap:8px;}
-.vit-btn{flex:1;padding:11px 4px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Inter',sans-serif;font-size:16px;cursor:pointer;font-weight:700;}
-.vit-btn.active{background:var(--accent);color:white;border-color:var(--accent);}
+.mood-row{display:flex;gap:9px;}
+.mood-btn{flex:1;aspect-ratio:1;border-radius:14px;border:1px solid var(--border);background:#fafafa;
+  color:#c4c4c4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s;padding:0;}
+.mood-btn svg{width:30px;height:30px;}
+.mood-btn span{font-size:12px;font-weight:600;}
+.mood-btn.on{color:#fff;border-color:transparent;}
+.mood-btn.on#mood-good{background:#4a9e6a;}
+.mood-btn.on#mood-normal{background:#5b8def;}
+.mood-btn.on#mood-bad{background:#e85d40;}
+#mood-card{transition:background .3s,border-color .3s;}
+#mood-card.wash-good{background:linear-gradient(180deg,#f2faf5,#fff);border-color:#dcefe3;}
+#mood-card.wash-normal{background:linear-gradient(180deg,#f2f6fe,#fff);border-color:#dbe6fa;}
+#mood-card.wash-bad{background:linear-gradient(180deg,#fdf3f0,#fff);border-color:#f8ddd5;}
 .indent{padding-left:56px;margin-top:-4px;margin-bottom:6px;}
 .divider{height:1px;background:var(--border);margin:10px 0;}
 .save-btn{width:100%;padding:16px;border:none;border-radius:11px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--accent);color:white;margin-bottom:16px;-webkit-appearance:none;}
@@ -88,6 +99,14 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 #chart-tip{position:fixed;z-index:300;width:142px;background:#f2f2f2;color:#1a1a1a;
   border:1px solid #e0e0e0;border-radius:10px;padding:9px 11px;font-family:'Inter',sans-serif;
   font-size:15px;line-height:1.45;text-align:center;box-shadow:0 3px 14px rgba(0,0,0,.13);pointer-events:auto;}
+.sect-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:12px;}
+.sect-tab{flex:1;padding:11px 0;border:none;background:none;font-family:'Inter',sans-serif;
+  font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#ccc;
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.sect-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.mood-legend{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap;}
+.mood-legend span{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);}
+.mood-legend i{width:11px;height:11px;border-radius:3px;display:inline-block;}
 .chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
 .goal-btn{border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:20px;padding:6px 13px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .goal-btn:hover{background:var(--accent);color:#fff;}
@@ -141,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v55</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v57</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
@@ -174,26 +193,47 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           <div class="track" id="track-gym" style="background:#eeeeee"><div class="thumb" id="thumb-gym" style="left:3px"></div></div>
           <div><div class="tgl-lbl">Gym session</div></div>
         </div>
-        <div class="toggle-row" onclick="tgl('supplements')">
-          <div class="track" id="track-supplements" style="background:#eeeeee"><div class="thumb" id="thumb-supplements" style="left:3px"></div></div>
-          <div><div class="tgl-lbl">Supplements</div></div>
-        </div>
         <div class="divider"></div>
         <div class="field">
-          <div class="field-lbl">Vitality points</div>
-          <div class="vit-row">
-            <button class="vit-btn active" id="vit-0" onclick="setVit(0)">0</button>
-            <button class="vit-btn" id="vit-3" onclick="setVit(3)">3</button>
-            <button class="vit-btn" id="vit-5" onclick="setVit(5)">5</button>
-            <button class="vit-btn" id="vit-8" onclick="setVit(8)">8</button>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;">
+            <div class="field-lbl" style="margin:0;">Vitality</div>
+            <div style="font-size:13px;color:var(--muted);"><b id="vit-num" style="color:var(--accent);font-size:19px;">0</b> / 8</div>
           </div>
+          <div style="height:9px;border-radius:5px;background:#f0f0f0;overflow:hidden;">
+            <div id="vit-bar" style="width:0%;height:100%;background:var(--accent);transition:width .3s;"></div>
+          </div>
+          <div id="vit-why" style="font-size:12px;color:var(--muted);margin-top:6px;">Add steps or a gym session</div>
         </div>
-        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this);updateProgress()"/></div>
+        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this);refreshVitality();updateProgress()"/></div>
         <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()"/><div id="bw-target-hint"></div></div>
         <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/><div id="cal-target-hint"></div></div>
         <div class="field">
           <div class="field-lbl">Sleep (h:mm)</div>
           <input type="text" id="sleep-txt" placeholder="e.g. 7:30" oninput="updateProgress()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;"/>
+        </div>
+      </div>
+      <div class="card" id="mood-card">
+        <div class="sec">Mood<span id="mood-optional" style="display:none;font-size:11px;font-weight:400;
+          letter-spacing:0;text-transform:none;color:var(--muted);margin-left:6px;">optional for this date</span></div>
+        <div class="mood-row">
+          <button class="mood-btn" id="mood-good" onclick="setMood('good')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+              <circle cx="9" cy="10" r=".7" fill="currentColor"/><circle cx="15" cy="10" r=".7" fill="currentColor"/>
+            </svg><span>Good</span>
+          </button>
+          <button class="mood-btn" id="mood-normal" onclick="setMood('normal')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/><path d="M8.5 15h7"/>
+              <circle cx="9" cy="10" r=".7" fill="currentColor"/><circle cx="15" cy="10" r=".7" fill="currentColor"/>
+            </svg><span>Normal</span>
+          </button>
+          <button class="mood-btn" id="mood-bad" onclick="setMood('bad')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/><path d="M8 16s1.5-2 4-2 4 2 4 2"/>
+              <circle cx="9" cy="10" r=".7" fill="currentColor"/><circle cx="15" cy="10" r=".7" fill="currentColor"/>
+            </svg><span>Bad</span>
+          </button>
         </div>
       </div>
       <div class="card">
@@ -219,6 +259,10 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 
     <!-- DASHBOARD -->
     <div id="tab-dashboard">
+      <div class="sect-tabs">
+        <button class="sect-tab active" id="sect-health" onclick="setSection('health')">Health</button>
+        <button class="sect-tab" id="sect-chinese" onclick="setSection('chinese')">Chinese</button>
+      </div>
       <div class="range-sel">
         <button class="range-btn" onclick="setRange(30,this)">1 month</button>
         <button class="range-btn active" onclick="setRange(91,this)">3 months</button>
@@ -336,7 +380,9 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 
 <script>
 const API = '/api/sheets';
-let entries = [], toggles = {gym:false,supplements:false,hackChinese:false,duChinese:false,yoyoChinese:false};
+let entries = [], toggles = {gym:false,hackChinese:false,duChinese:false,yoyoChinese:false};
+let mood = '';
+let dashSection = 'health';
 let vit = 0, pendingSave = null, rangeDays = 91, studyFilter = {hackChinese:true,duChinese:false,yoyoChinese:false}, chartsBuilt = false;
 
 // Favicon
@@ -378,14 +424,26 @@ function isoLocal(dt){
 }
 function todayStr(){ return isoLocal(new Date()); }
 function fmtDate(s){ return new Date(s+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}); }
-function isComplete(e){ return !!(e.steps&&e.bodyweight&&e.calories&&e.sleep&&e.hackChinese&&e.duChinese&&e.yoyoChinese); }
+// Mood was introduced on 12 Aug 2026. Requiring it retroactively would mark
+// every historical day incomplete, since the data simply does not exist for
+// them — so days before this date keep the rule they were logged under.
+const MOOD_REQUIRED_FROM = '2026-08-12';
+
+function isComplete(e){
+  const base = !!(e.steps && e.bodyweight && e.calories && e.sleep
+                  && e.hackChinese && e.duChinese && e.yoyoChinese);
+  if(!base) return false;
+  return (e.date >= MOOD_REQUIRED_FROM) ? !!e.mood : true;
+}
 
 function countProgress(){
-  // Fields: supplements, vitality(>0), steps, bodyweight, calories, sleep, hackChinese, duChinese, yoyoChinese = 9 total
-  // Gym intentionally excluded — not every day is a gym day
-  let filled = 0, total = 9;
-  if(toggles.supplements) filled++;
-  if(vit > 0) filled++;
+  // Gym is excluded (not every day is a gym day) and vitality is derived from
+  // gym + steps, so counting it would double-count steps. Mood only counts for
+  // dates from MOOD_REQUIRED_FROM onwards — see isComplete.
+  const d = document.getElementById('entry-date').value || todayStr();
+  const moodCounts = d >= MOOD_REQUIRED_FROM;
+  let filled = 0, total = moodCounts ? 8 : 7;
+  if(moodCounts && mood) filled++;
   const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
   if(stepsRaw) filled++;
   if(document.getElementById('bodyweight').value) filled++;
@@ -431,15 +489,64 @@ function tgl(key){
   document.getElementById('track-'+key).style.background=toggles[key]?'#e85d40':'#eeeeee';
   document.getElementById('thumb-'+key).style.left=toggles[key]?'23px':'3px';
   if(key==='hackChinese') document.getElementById('words-wrap').classList.toggle('hidden',!toggles[key]);
+  if(key==='gym') refreshVitality();
   updateProgress();
 }
 function setTgl(key,val){ toggles[key]=!!val; document.getElementById('track-'+key).style.background=val?'#e85d40':'#eeeeee'; document.getElementById('thumb-'+key).style.left=val?'23px':'3px'; }
-function setVit(v){ vit=v; [0,3,5,8].forEach(x=>document.getElementById('vit-'+x).classList.toggle('active',x===v)); updateProgress(); }
+// Vitality is derived, not entered. Gym earns the full 8; steps earn a band.
+// Where both apply the higher wins — 8 is the ceiling either way.
+function stepsBand(n){
+  if(!isFinite(n) || n < 7500)  return 0;
+  if(n < 10000)  return 3;
+  if(n < 12500)  return 5;
+  return 8;
+}
+function computeVitality(){
+  const raw = (document.getElementById('steps').value||'').replace(/,/g,'');
+  const n = parseInt(raw);
+  const fromSteps = stepsBand(n);
+  const fromGym = toggles.gym ? 8 : 0;
+  const score = Math.max(fromSteps, fromGym);
+  let why;
+  if(!toggles.gym && !isFinite(n)) why = 'Add steps or a gym session';
+  else {
+    const bits=[];
+    if(toggles.gym) bits.push('Gym session');
+    if(isFinite(n)) bits.push(n.toLocaleString()+' steps');
+    why = bits.join(' · ') + (fromGym > fromSteps && isFinite(n) ? '' : '');
+  }
+  return { score, why };
+}
+function refreshVitality(){
+  const {score, why} = computeVitality();
+  vit = score;
+  const bar=document.getElementById('vit-bar'), num=document.getElementById('vit-num'), w=document.getElementById('vit-why');
+  if(bar) bar.style.width=(score/8*100)+'%';
+  if(num) num.textContent=score;
+  if(w) w.textContent=why;
+}
+
+function refreshMoodOptional(){
+  const el=document.getElementById('mood-optional');
+  if(!el) return;
+  const d=document.getElementById('entry-date').value||todayStr();
+  el.style.display = (d < MOOD_REQUIRED_FROM) ? 'inline' : 'none';
+}
+
+function setMood(m){
+  mood = (mood===m) ? '' : m;     // tapping the active one clears it
+  ['good','normal','bad'].forEach(x=>{
+    document.getElementById('mood-'+x).classList.toggle('on', x===mood);
+  });
+  const card=document.getElementById('mood-card');
+  card.className='card'+(mood?' wash-'+mood:'');
+  updateProgress();
+}
 
 function readForm(){
   const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
   const sleep = (document.getElementById('sleep-txt').value||'').trim();
-  return { date:document.getElementById('entry-date').value, gym:toggles.gym, supplements:toggles.supplements, vitalityPoints:vit,
+  return { date:document.getElementById('entry-date').value, gym:toggles.gym, mood:mood, vitalityPoints:vit,
     steps:stepsRaw, bodyweight:document.getElementById('bodyweight').value, calories:document.getElementById('calories').value,
     sleep, hackChinese:toggles.hackChinese, hackChineseWords:document.getElementById('hackChineseWords').value,
     duChinese:toggles.duChinese, yoyoChinese:toggles.yoyoChinese };
@@ -447,9 +554,11 @@ function readForm(){
 
 function fillForm(e){
   document.getElementById('entry-date').value=e.date;
-  ['gym','supplements','hackChinese','duChinese','yoyoChinese'].forEach(k=>setTgl(k,e[k]));
+  ['gym','hackChinese','duChinese','yoyoChinese'].forEach(k=>setTgl(k,e[k]));
   document.getElementById('words-wrap').classList.toggle('hidden',!e.hackChinese);
-  setVit(e.vitalityPoints||0);
+  mood = (e.mood||'').toLowerCase();
+  ['good','normal','bad'].forEach(x=>document.getElementById('mood-'+x).classList.toggle('on', x===mood));
+  document.getElementById('mood-card').className='card'+(mood?' wash-'+mood:'');
   document.getElementById('steps').value = e.steps ? parseInt(e.steps).toLocaleString() : '';
   document.getElementById('bodyweight').value=e.bodyweight||'';
   document.getElementById('calories').value=e.calories||'';
@@ -465,10 +574,12 @@ function fillForm(e){
     if(!isNaN(sh)&&!isNaN(sm)) sleepVal=sh+':'+(sm<10?'0'+sm:String(sm));
   }
   document.getElementById('sleep-txt').value = sleepVal;
+  refreshVitality();
+  refreshMoodOptional();
   updateTargetHints();
 }
 function blankForm(date){
-  fillForm({date,gym:false,supplements:false,vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
+  fillForm({date,gym:false,mood:'',vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
 }
 function onDateChange(){
   const date=document.getElementById('entry-date').value;
@@ -730,6 +841,67 @@ function chartTap(e){
   tip._t=setTimeout(()=>tip.classList.add('hidden'),2600);
 }
 
+const MOOD_COL={good:'#4a9e6a',normal:'#5b8def',bad:'#e85d40'};
+
+// 100% stacked weekly mood. Weeks with few entries are dimmed and labelled,
+// because a single green day and a full green week otherwise look identical.
+function buildMoodChart(filtered){
+  const weeks={};
+  filtered.forEach(e=>{
+    const m=(e.mood||'').toLowerCase();
+    if(!MOOD_COL[m]) return;
+    const k=getWeekKey(e.date);
+    if(!weeks[k]) weeks[k]={label:fmtDate(e.date),good:0,normal:0,bad:0,n:0};
+    weeks[k][m]++; weeks[k].n++;
+  });
+  const ws=Object.values(weeks);
+  const legend='<div class="mood-legend">'
+    +'<span><i style="background:#4a9e6a"></i>Good</span>'
+    +'<span><i style="background:#5b8def"></i>Normal</span>'
+    +'<span><i style="background:#e85d40"></i>Bad</span></div>';
+  if(!ws.length){
+    return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend
+      +'<svg viewBox="0 0 500 310" style="width:100%;height:310px"><text x="250" y="155" text-anchor="middle" '
+      +'fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No mood logged in this period</text></svg></div>';
+  }
+  const W=500,H=310,PL=68,PR=20,PT=22,PB=40,iW=W-PL-PR,iH=H-PT-PB;
+  const slot=iW/ws.length, bw=Math.min(46,slot*0.62);
+  let bars='';
+  ws.forEach((w,i)=>{
+    const x=PL+slot*i+(slot-bw)/2;
+    let y=PT;
+    const faded=w.n<4;
+    ['good','normal','bad'].forEach(m=>{
+      if(!w[m]) return;
+      const h=(w[m]/w.n)*iH;
+      bars+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+MOOD_COL[m]+'"'
+         +(faded?' fill-opacity="0.42"':'')+'/>';
+      y+=h;
+    });
+    bars+='<text x="'+(x+bw/2)+'" y="'+(PT-7)+'" text-anchor="middle" font-size="12" fill="'
+       +(faded?'#c8c8c8':'#999999')+'">'+w.n+'d</text>';
+  });
+  const step=Math.ceil(ws.length/5);
+  let xl='';
+  ws.forEach((w,i)=>{
+    if(i%step!==0 && i!==ws.length-1) return;
+    xl+='<text x="'+(PL+slot*i+slot/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="15" fill="#999999">'+w.label+'</text>';
+  });
+  let grid='';
+  [0,.25,.5,.75,1].forEach(f=>{
+    const y=PT+iH*f;
+    grid+='<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="#f0f0f0" stroke-width="1"/>'
+       +'<text x="'+(PL-7)+'" y="'+(y+5)+'" text-anchor="end" font-size="16" fill="#999999" font-weight="700">'
+       +Math.round((1-f)*100)+'%</text>';
+  });
+  const anyFaded=ws.some(w=>w.n<4);
+  const note=anyFaded?'<div style="font-size:12px;color:var(--muted);margin-top:8px;">'
+    +'Faded bars are weeks with fewer than 4 days logged.</div>':'';
+  return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend
+    +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px" font-family="Inter,sans-serif">'
+    +grid+bars+xl+'</svg>'+note+'</div>';
+}
+
 function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, pills, opts){
   opts = opts || {};
   const head = (opts.action || opts.titleExtra)
@@ -747,105 +919,119 @@ function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxi
 function renderCharts(){
   const filtered=getFiltered();
   let html='';
-  // Bodyweight — daily. When a goal exists the axis runs forward to the
-  // deadline so the required trend is visible, not just the history.
-  const bwMap={};
-  filtered.forEach(e=>{ if(e.bodyweight) bwMap[e.date]=parseFloat(e.bodyweight); });
-  let bwDates=filtered.map(e=>e.date);
-  if(goal && isValidDate(goal.deadline) && goal.deadline>todayStr()){
-    bwDates.push(todayStr());          // today may not be logged yet
-    let d=todayStr(), guard=0;         // hard stop: two years of forward dates
-    while(d<goal.deadline && guard++<730){ d=addDays(d,1); bwDates.push(d); }
-  }
-  bwDates=[...new Set(bwDates)].sort();
-  const bwLabels=bwDates.map(d=>fmtDate(d));
-  const bwData=bwDates.map(d=>bwMap[d]!==undefined?bwMap[d]:null);
-  const bwTarget=goal?bwDates.map(d=>d<goal.createdDate?null:targetWeightOn(d)):null;
 
-  // Where the goal window begins on this axis. If the goal predates the visible
-  // range, the whole chart is inside it.
-  let goalMarkIdx=-1;
-  if(goal && bwDates.length){
-    if(goal.createdDate<=bwDates[0]) goalMarkIdx=0;
-    else {
-      goalMarkIdx=bwDates.indexOf(goal.createdDate);
-      if(goalMarkIdx<0) goalMarkIdx=bwDates.findIndex(d=>d>=goal.createdDate);
+  if(dashSection==='health'){
+    // ── Bodyweight — daily. With a goal the axis runs forward to the deadline. ──
+    const bwMap={};
+    filtered.forEach(e=>{ if(e.bodyweight) bwMap[e.date]=parseFloat(e.bodyweight); });
+    let bwDates=filtered.map(e=>e.date);
+    if(goal && isValidDate(goal.deadline) && goal.deadline>todayStr()){
+      bwDates.push(todayStr());          // today may not be logged yet
+      let d=todayStr(), guard=0;         // hard stop: two years of forward dates
+      while(d<goal.deadline && guard++<730){ d=addDays(d,1); bwDates.push(d); }
     }
+    bwDates=[...new Set(bwDates)].sort();
+    const bwLabels=bwDates.map(d=>fmtDate(d));
+    const bwData=bwDates.map(d=>bwMap[d]!==undefined?bwMap[d]:null);
+    const bwTarget=goal?bwDates.map(d=>d<goal.createdDate?null:targetWeightOn(d)):null;
+
+    let goalMarkIdx=-1;
+    if(goal && bwDates.length){
+      if(goal.createdDate<=bwDates[0]) goalMarkIdx=0;
+      else {
+        goalMarkIdx=bwDates.indexOf(goal.createdDate);
+        if(goalMarkIdx<0) goalMarkIdx=bwDates.findIndex(d=>d>=goal.createdDate);
+      }
+    }
+
+    let statusPill='';
+    const stStatus=statusState();
+    if(stStatus){
+      const g=stStatus.gap;
+      const label = Math.abs(g)<0.15 ? 'On track'
+        : g<0 ? Math.abs(g).toFixed(1)+' kg ahead'
+              : g.toFixed(1)+' kg behind';
+      const bg = g>0.15 ? 'background:#fdecea;color:#c0392b;' : 'background:#eaf6ee;color:#2f6a45;';
+      statusPill = '<span class="status-pill" style="'+bg+'">'+label
+        +'<button class="pill-info" onclick="event.stopPropagation();showStatusInfo()" title="How this is worked out">i</button></span>';
+    }
+    const bwAction='<button class="goal-btn" onclick="openGoalModal()">'+(goal?'Edit':'+ Goal')+'</button>';
+
+    // If a goal exists but the curve cannot be drawn, say why on the chart itself
+    let bwLegend='';
+    if(goal){
+      const tgtPts=(bwTarget||[]).filter(v=>v!==null&&v!==undefined&&!isNaN(v)).length;
+      if(tgtPts>0){
+        bwLegend='<span><i class="legend-swatch" style="border-top-color:#e85d40"></i>Actual</span>'
+          +'<span><i class="legend-swatch dash"></i>Target · '+goal.targetWeight.toFixed(1)+' kg by '
+          +fmtDate(goal.deadline)+' '+goal.deadline.slice(0,4)+'</span>';
+      } else {
+        let why;
+        if(!isValidDate(goal.deadline))        why='the deadline ('+goal.deadline+') is not a readable date';
+        else if(goal.deadline<=todayStr())     why='the deadline ('+goal.deadline+') has already passed';
+        else if(!isValidDate(goal.createdDate))why='the start date ('+goal.createdDate+') is not a readable date';
+        else if(!isFinite(goal.startWeight))   why='the starting weight is missing';
+        else                                   why='no points were generated between '+goal.createdDate+' and '+goal.deadline;
+        bwLegend='<span style="color:#c0392b;font-weight:600;">Target curve not drawn — '+why+'.</span>';
+      }
+    }
+    html+=buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70,null,
+      {action:bwAction, titleExtra:statusPill, legend:bwLegend, targetData:bwTarget,
+       markIndex: goalMarkIdx,
+       markLabel: goal ? 'Goal started '+fmtDate(goal.createdDate) : ''});
+
+    // ── Gym sessions — weekly count ──
+    const gymWks={};
+    filtered.forEach(e=>{
+      const k=getWeekKey(e.date);
+      if(!gymWks[k]) gymWks[k]={label:fmtDate(e.date),sum:0};
+      if(e.gym) gymWks[k].sum++;
+    });
+    const gymW=Object.values(gymWks);
+    html+=buildChart('Weekly gym sessions',gymW.map(w=>w.label),gymW.map(w=>w.sum),'#e85d40','0.0','0.0',0,4);
+
+    // ── Steps ──
+    const st=weeklyAvgData(filtered,'steps',parseInt);
+    html+=buildChart('Weekly steps',st.labels,st.data,'#e85d40','#,##0','#,##0');
+
+    // ── Calories ──
+    const ca=weeklyAvgData(filtered,'calories',parseInt);
+    html+=buildChart('Weekly calories',ca.labels,ca.data,'#e85d40','#,##0','#,##0',1000,3000);
+
+    // ── Vitality — derived from gym + steps, so it belongs with Health ──
+    const vi=weeklySumData(filtered,'vitalityPoints',parseInt,40);
+    html+=buildChart('Weekly vitality points',vi.labels,vi.data,'#e85d40','#,##0','#,##0',12,40);
+
+    // ── Sleep ──
+    const sleepEntries=filtered.filter(e=>{
+      if(!e.sleep||!e.sleep.includes(':')) return false;
+      const sp=e.sleep.split(':'); const h=parseInt(sp[0]); const m=parseInt(sp[1]);
+      return !isNaN(h)&&!isNaN(m)&&e.sleep.indexOf('NaN')===-1;
+    });
+    const sleepWks={};
+    sleepEntries.forEach(e=>{
+      const sp=e.sleep.split(':'); const hrs=parseInt(sp[0])+(parseInt(sp[1])/60);
+      const k=getWeekKey(e.date);
+      if(!sleepWks[k]) sleepWks[k]={label:fmtDate(e.date),sum:0,count:0};
+      sleepWks[k].sum+=hrs; sleepWks[k].count++;
+    });
+    const sleepW=Object.values(sleepWks);
+    html+=buildChart('Weekly sleep',
+      sleepW.length?sleepW.map(w=>w.label):[''],
+      sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null],
+      '#e85d40','sleep','sleep',5,9);
+
+    // ── Mood ──
+    html+=buildMoodChart(filtered);
+
+    document.getElementById('charts-area').innerHTML=html;
+    return;
   }
 
-  // Status pill — latest reading against the 7-day mean of the target curve
-  let statusPill='';
-  const stStatus=statusState();
-  if(stStatus){
-    const g=stStatus.gap;
-    const label = Math.abs(g)<0.15 ? 'On track'
-      : g<0 ? Math.abs(g).toFixed(1)+' kg ahead'
-            : g.toFixed(1)+' kg behind';
-    const bg = g>0.15 ? 'background:#fdecea;color:#c0392b;' : 'background:#eaf6ee;color:#2f6a45;';
-    statusPill = '<span class="status-pill" style="'+bg+'">'+label
-      +'<button class="pill-info" onclick="event.stopPropagation();showStatusInfo()" title="How this is worked out">i</button></span>';
-  }
-  const bwAction='<button class="goal-btn" onclick="openGoalModal()">'+(goal?'Edit':'+ Goal')+'</button>';
-  // If a goal is set but the curve cannot be drawn, say why on the chart itself
-  // rather than rendering an empty space.
-  let bwLegend='';
-  if(goal){
-    const tgtPts=(bwTarget||[]).filter(v=>v!==null&&v!==undefined&&!isNaN(v)).length;
-    if(tgtPts>0){
-      bwLegend='<span><i class="legend-swatch" style="border-top-color:#e85d40"></i>Actual</span>'
-        +'<span><i class="legend-swatch dash"></i>Target · '+goal.targetWeight.toFixed(1)+' kg by '
-        +fmtDate(goal.deadline)+' '+goal.deadline.slice(0,4)+'</span>';
-    } else {
-      let why;
-      if(!isValidDate(goal.deadline))        why='the deadline ('+goal.deadline+') is not a readable date';
-      else if(goal.deadline<=todayStr())     why='the deadline ('+goal.deadline+') has already passed';
-      else if(!isValidDate(goal.createdDate))why='the start date ('+goal.createdDate+') is not a readable date';
-      else if(!isFinite(goal.startWeight))   why='the starting weight is missing';
-      else                                   why='no points were generated between '+goal.createdDate+' and '+goal.deadline;
-      bwLegend='<span style="color:#c0392b;font-weight:600;">Target curve not drawn — '+why+'.</span>';
-    }
-  }
-  html+=buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70,null,
-    {action:bwAction, titleExtra:statusPill, legend:bwLegend, targetData:bwTarget,
-     markIndex: goalMarkIdx,
-     markLabel: goal ? 'Goal started '+fmtDate(goal.createdDate) : ''});
-  // Gym sessions — weekly sum
-  const gymWks={};
-  filtered.forEach(e=>{
-    const k=getWeekKey(e.date);
-    if(!gymWks[k]) gymWks[k]={label:fmtDate(e.date),sum:0};
-    if(e.gym) gymWks[k].sum++;
-  });
-  const gymW=Object.values(gymWks);
-  html+=buildChart('Weekly gym sessions',gymW.map(w=>w.label),gymW.map(w=>w.sum),'#e85d40','0.0','0.0',0,4);
-  // Steps — weekly avg
-  const st=weeklyAvgData(filtered,'steps',parseInt);
-  html+=buildChart('Weekly steps',st.labels,st.data,'#e85d40','#,##0','#,##0');
-  // Calories — weekly avg
-  const ca=weeklyAvgData(filtered,'calories',parseInt);
-  html+=buildChart('Weekly calories',ca.labels,ca.data,'#e85d40','#,##0','#,##0',1000,3000);
-  // Vitality — weekly sum
-  const vi=weeklySumData(filtered,'vitalityPoints',parseInt,40);
-  html+=buildChart('Weekly vitality points',vi.labels,vi.data,'#e85d40','#,##0','#,##0',12,40);
-  // Words — weekly avg
+  // ══ Chinese ══
   const wo=weeklyAvgData(filtered,'hackChineseWords',parseInt);
   html+=buildChart('Weekly Chinese words known',wo.labels,wo.data,'#e85d40',null,'#,##0');
-  // Sleep — weekly average
-  const sleepEntries=filtered.filter(e=>{
-    if(!e.sleep||!e.sleep.includes(':')) return false;
-    const sp=e.sleep.split(':'); const h=parseInt(sp[0]); const m=parseInt(sp[1]);
-    return !isNaN(h)&&!isNaN(m)&&e.sleep.indexOf('NaN')===-1;
-  });
-  const sleepWks={};
-  sleepEntries.forEach(e=>{
-    const sp=e.sleep.split(':'); const hrs=parseInt(sp[0])+(parseInt(sp[1])/60);
-    const k=getWeekKey(e.date);
-    if(!sleepWks[k]) sleepWks[k]={label:fmtDate(e.date),sum:0,count:0};
-    sleepWks[k].sum+=hrs; sleepWks[k].count++;
-  });
-  const sleepW=Object.values(sleepWks);
-  html+=buildChart('Weekly sleep',sleepW.length?sleepW.map(w=>w.label):[''],sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null],'#e85d40','sleep','sleep',5,9);
-  // Study pills
+
   const pillsHTML=`<div class="study-pills">
     <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:13px;height:13px;border-radius:50%"/> HackChinese</button>
     <button class="pill${studyFilter.duChinese?' active':''}" onclick="toggleStudy('duChinese')"><img src="${ICONS_SM.duChinese}" style="width:13px;height:13px;border-radius:50%"/> DuChinese</button>
@@ -853,8 +1039,10 @@ function renderCharts(){
   </div>`;
   const sd=weeklyStudyCalc(filtered);
   html+=buildChart('Weekly study activity',sd.labels,sd.data,'#e85d40','0.0','#,##0',0,7,pillsHTML);
+
   document.getElementById('charts-area').innerHTML=html;
 }
+
 function toggleStudy(key){
   // Radio style — select only this one
   studyFilter={hackChinese:false,duChinese:false,yoyoChinese:false};
@@ -937,6 +1125,14 @@ function computePerfectWeeks(){
   return {perfect, total: Math.max(weeksSoFar,total)};
 }
 
+function setSection(s){
+  dashSection=s;
+  document.getElementById('sect-health').classList.toggle('active',s==='health');
+  document.getElementById('sect-chinese').classList.toggle('active',s==='chinese');
+  document.getElementById('content').scrollTop=0;
+  renderCharts();
+}
+
 function renderDashboard(){
   renderCharts();
 }
@@ -969,10 +1165,11 @@ function renderHistory(){
     const meta=metaParts.join(' · ')||'No metrics logged';
     const badge=isComplete(e)?'<span class="hist-badge">✓</span>':'';
     const rowClass=isComplete(e)?'hist-row complete':'hist-row partial';
-    // Health row: gym + supplements + vitality
+    // Health row: gym + mood + vitality
     let healthIcons='';
     if(e.gym) healthIcons+='<span style="font-size:17px;line-height:1">🏋️</span>';
-    if(e.supplements) healthIcons+='<span style="display:inline-flex;width:20px;height:20px;border-radius:10px;background:#e85d40;color:white;font-size:12px;align-items:center;justify-content:center;">💊</span>';
+    const moodCol={good:'#4a9e6a',normal:'#5b8def',bad:'#e85d40'}[(e.mood||'').toLowerCase()];
+    if(moodCol) healthIcons+='<span title="Mood: '+e.mood+'" style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+moodCol+';"></span>';
     if(e.vitalityPoints>0) healthIcons+='<span style="display:inline-flex;min-width:20px;height:20px;padding:0 3px;border-radius:50%;background:white;border:1.5px solid #eeeeee;color:#e85d40;font-size:11px;align-items:center;justify-content:center;font-weight:700">'+e.vitalityPoints+'</span>';
     // Chinese row
     let chineseIcons='';
@@ -1364,7 +1561,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v55');
+  row('version','v57');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
