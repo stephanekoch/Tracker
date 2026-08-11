@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v57</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v58</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
@@ -1358,40 +1358,50 @@ function projectedFinish(){
 
 // Mean of the target curve across the N days ending on endDate. Never reaches
 // back before the goal existed, so early on it averages fewer days.
-function targetAvgWindow(endDate, days){
+// Both sides of the comparison are averaged over the same trailing window, so
+// a single heavy morning cannot swing the verdict.
+function statusWindow(days){
   days = days || 7;
-  const vals=[], used=[];
+  if(!goal) return null;
+
+  // Anchor on the most recent logged weight since the goal began
+  const logged = entries.filter(e=>e.bodyweight && e.date>=goal.createdDate)
+                        .sort((a,b)=>b.date.localeCompare(a.date));
+  if(!logged.length) return null;
+  const endDate = logged[0].date;
+
+  const rows=[];
   for(let i=0;i<days;i++){
-    const d=addDays(endDate,-i);
-    if(goal && d<goal.createdDate) break;
-    const t=targetWeightOn(d);
+    const d = addDays(endDate,-i);
+    if(d < goal.createdDate) break;              // never reach back before the goal
+    const t = targetWeightOn(d);
     if(t===null) break;
-    vals.push(t); used.push({date:d,target:t});
+    const e = entries.find(x=>x.date===d && x.bodyweight);
+    const a = e ? parseFloat(e.bodyweight) : null;
+    rows.push({ date:d, target:t, actual:(isFinite(a)?a:null) });
   }
-  if(!vals.length) return null;
-  used.reverse();
-  return { avg: vals.reduce((a,b)=>a+b,0)/vals.length, n: vals.length,
-           from: used[0].date, to: used[used.length-1].date, used: used };
+  if(!rows.length) return null;
+  rows.reverse();
+
+  const acts = rows.filter(r=>r.actual!==null).map(r=>r.actual);
+  if(!acts.length) return null;
+  const tgts = rows.map(r=>r.target);
+
+  const actualAvg = acts.reduce((a,b)=>a+b,0)/acts.length;
+  const targetAvg = tgts.reduce((a,b)=>a+b,0)/tgts.length;
+
+  return {
+    rows, endDate,
+    days: rows.length,          // days spanned by the window
+    nActual: acts.length,       // days within it that have a reading
+    actualAvg, targetAvg,
+    gap: actualAvg - targetAvg,
+    ratio: actualAvg / targetAvg,
+    from: rows[0].date, to: rows[rows.length-1].date
+  };
 }
 
-// The reading the status is judged on: most recent logged weight since the goal began
-function latestReading(){
-  if(!goal) return null;
-  const l=entries.filter(e=>e.bodyweight&&e.date>=goal.createdDate)
-                 .sort((a,b)=>b.date.localeCompare(a.date))[0];
-  if(!l) return null;
-  const v=parseFloat(l.bodyweight);
-  return isFinite(v)?{date:l.date,weight:v}:null;
-}
-
-function statusState(){
-  if(!goal) return null;
-  const r=latestReading();
-  if(!r) return null;
-  const win=targetAvgWindow(r.date,7);
-  if(!win) return null;
-  return { reading:r, win:win, gap:r.weight-win.avg };
-}
+function statusState(){ return statusWindow(7); }
 
 /* ── Goal storage ───────────────────────────────────────── */
 
@@ -1536,23 +1546,46 @@ function updateTargetHints(){
 function showStatusInfo(){
   const st=statusState();
   const box=document.getElementById('status-body');
-  if(!st){ box.innerHTML='<p>No goal or no bodyweight logged since the goal began.</p>'; }
-  else{
-    const w=st.win, r=st.reading;
-    const rows=w.used.map(u=>'<tr><td style="padding:2px 10px 2px 0;color:var(--muted);">'
-      +fmtDate(u.date)+'</td><td style="padding:2px 0;text-align:right;font-variant-numeric:tabular-nums;">'
-      +u.target.toFixed(2)+' kg</td></tr>').join('');
-    box.innerHTML=
-      '<p style="margin-bottom:12px;"><b style="color:var(--text);">Your latest reading</b><br>'
-      +'<span style="font-size:19px;color:var(--accent);font-weight:600;">'+r.weight.toFixed(1)+' kg</span> '
-      +'logged '+(r.date===todayStr()?'today':'on '+fmtDate(r.date))+'.</p>'
+  if(!st){
+    box.innerHTML='<p>No goal, or no bodyweight logged since the goal began.</p>';
+  } else {
+    const pct=(st.ratio-1)*100;
+    const rows=st.rows.map(r=>
+      '<tr>'
+      +'<td style="padding:3px 10px 3px 0;color:var(--muted);white-space:nowrap;">'+fmtDate(r.date)+'</td>'
+      +'<td style="padding:3px 10px 3px 0;text-align:right;font-variant-numeric:tabular-nums;color:'
+        +(r.actual===null?'#ccc':'var(--text)')+';">'
+        +(r.actual===null?'—':r.actual.toFixed(1))+'</td>'
+      +'<td style="padding:3px 0;text-align:right;font-variant-numeric:tabular-nums;color:#2f8f5b;">'
+        +r.target.toFixed(2)+'</td>'
+      +'</tr>').join('');
 
-      +'<p style="margin-bottom:6px;"><b style="color:var(--text);">Target average</b><br>'
-      +'The mean of the target curve across the '+w.n+' day'+(w.n===1?'':'s')+' ending '
-      +fmtDate(w.to)+(w.n>1?' (from '+fmtDate(w.from)+')':'')+':</p>'
-      +'<table style="width:100%;font-size:13px;margin-bottom:6px;">'+rows+'</table>'
-      +'<p style="padding-top:6px;border-top:1px solid #eee;">'
-      +'Average: <b style="color:var(--text);">'+w.avg.toFixed(2)+' kg</b></p>';
+    box.innerHTML=
+      '<p style="margin-bottom:11px;">Both figures are averaged over the '+st.days+' day'
+      +(st.days===1?'':'s')+' ending '+fmtDate(st.to)
+      +(st.days>1?' (from '+fmtDate(st.from)+')':'')+'.</p>'
+
+      +'<table style="width:100%;font-size:13px;margin-bottom:4px;">'
+      +'<tr><th style="text-align:left;padding-bottom:5px;font-weight:600;color:var(--text);">Day</th>'
+      +'<th style="text-align:right;padding-bottom:5px;font-weight:600;color:var(--text);">Actual</th>'
+      +'<th style="text-align:right;padding-bottom:5px;font-weight:600;color:#2f8f5b;">Target</th></tr>'
+      +rows+'</table>'
+
+      +'<div style="border-top:1px solid #eee;margin-top:9px;padding-top:10px;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+      +'<span>Actual average'+(st.nActual<st.days?' <span style="color:var(--muted);font-size:12px;">('
+        +st.nActual+' of '+st.days+' days logged)</span>':'')+'</span>'
+      +'<b style="color:var(--text);">'+st.actualAvg.toFixed(2)+' kg</b></div>'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:9px;">'
+      +'<span>Target average</span><b style="color:#2f8f5b;">'+st.targetAvg.toFixed(2)+' kg</b></div>'
+
+      +'<div style="display:flex;justify-content:space-between;padding-top:9px;border-top:1px solid #eee;">'
+      +'<span>Actual ÷ target</span><b style="color:'+(st.gap>0.15?'#c0392b':'#2f6a45')+';">'
+      +st.ratio.toFixed(4)+'  ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</b></div>'
+      +'<div style="display:flex;justify-content:space-between;margin-top:4px;">'
+      +'<span>Difference</span><b style="color:'+(st.gap>0.15?'#c0392b':'#2f6a45')+';">'
+      +(st.gap>0?'+':'')+st.gap.toFixed(2)+' kg</b></div>'
+      +'</div>';
   }
   document.getElementById('status-modal').classList.remove('hidden');
 }
@@ -1561,7 +1594,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v57');
+  row('version','v58');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
