@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v67</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v68</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -267,6 +267,12 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
             <div class="tgl-sub" id="notif-sub">A nudge at 9pm listing what is left</div>
           </div>
         </div>
+        <button id="notif-test" onclick="event.stopPropagation();sendTestNotification()"
+          style="width:100%;margin-top:11px;border:1px solid var(--border);background:transparent;
+          color:var(--text2);border-radius:9px;padding:9px;font-family:'Inter',sans-serif;
+          font-size:13px;font-weight:600;cursor:pointer;">Send a test notification</button>
+        <div id="notif-test-out" style="display:none;font-size:12px;line-height:1.55;margin-top:9px;
+          padding:9px 11px;border-radius:8px;"></div>
       </div>
     </div>
 
@@ -1619,7 +1625,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row("version","v67");
+  row("version","v68");
   row('last load error', window.__lastLoadError || 'none');
   row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
   const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
@@ -1717,6 +1723,36 @@ async function initPush(){
     console.warn('Service worker registration failed:', e);
     setNotifSub('Could not set up reminders: '+(e.message||e));
   }
+}
+
+async function sendTestNotification(){
+  const out=document.getElementById('notif-test-out');
+  const btn=document.getElementById('notif-test');
+  btn.disabled=true; btn.textContent='Sending…';
+  out.style.display='block';
+  out.style.background='#f6f6f6'; out.style.color='var(--text2)';
+  out.textContent='Asking the server to send one now…';
+  try{
+    const r = await fetch('/api/remind?test=1', {cache:'no-store'}).then(x=>x.json());
+    if(r.ok){
+      out.style.background='#eaf6ee'; out.style.color='#2f6a45';
+      out.innerHTML='<b>Accepted by '+(r.endpointHost||'the push service')+'</b> (status '
+        +(r.pushServiceStatus||'?')+').<br>Sent: “'+r.sentTitle+' — '+r.sentBody+'”'
+        +'<br><br>If nothing appeared, the message was dropped after the push service accepted it. '
+        +'Check the app was opened from your home screen shortcut, and that notifications are allowed '
+        +'for it under Android Settings → Apps.';
+    } else {
+      out.style.background='#fdecea'; out.style.color='#8a2b1a';
+      out.innerHTML='<b>Failed</b>'+(r.pushServiceStatus?' (status '+r.pushServiceStatus+')':'')
+        +'<br>'+(r.error||'')+(r.hint?'<br><br>'+r.hint:'')
+        +(r.pushServiceBody?'<br><br><span style="font-family:ui-monospace,monospace;font-size:11px;">'
+          +String(r.pushServiceBody).replace(/</g,'&lt;')+'</span>':'');
+    }
+  }catch(e){
+    out.style.background='#fdecea'; out.style.color='#8a2b1a';
+    out.textContent='Could not reach the server: '+(e.message||e);
+  }
+  btn.disabled=false; btn.textContent='Send a test notification';
 }
 
 async function toggleReminders(){

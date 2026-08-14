@@ -40,10 +40,13 @@ export default async function handler(req, res) {
   // needing the cron secret. Useful for confirming setup rather than waiting
   // until the evening to find out something is misconfigured.
   const isCheck = req.query && (req.query.check === '1' || req.query.check === 'true');
+  // ?test=1 sends immediately regardless of what is outstanding, and reports
+  // exactly what the push service said. Removes cron from the equation.
+  const isTest = req.query && (req.query.test === '1' || req.query.test === 'true');
 
   // Vercel signs cron requests; reject anything else in production
   const secret = process.env.CRON_SECRET;
-  if (secret && !isCheck) {
+  if (secret && !isCheck && !isTest) {
     const auth = req.headers.authorization || '';
     if (auth !== `Bearer ${secret}`) return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -87,6 +90,42 @@ export default async function handler(req, res) {
 
     const row = rows.find(r => r.date === today);
     const missing = outstanding(row, today);
+
+    if (isTest) {
+      let sub;
+      try { sub = JSON.parse(subWrap.subscription); }
+      catch (e) { return res.status(200).json({ test: true, ok: false, error: 'stored subscription is not valid JSON' }); }
+      const body = missing.length ? missing.join(' · ') : 'Nothing outstanding — this is a test';
+      try {
+        const result = await webpush.sendNotification(sub, JSON.stringify({
+          title: missing.length
+            ? `${missing.length} action${missing.length === 1 ? '' : 's'} left today`
+            : 'Test notification',
+          body
+        }));
+        return res.status(200).json({
+          test: true, ok: true,
+          pushServiceStatus: result && result.statusCode,
+          endpointHost: (sub.endpoint || '').split('/')[2] || null,
+          sentTitle: missing.length ? `${missing.length} actions left today` : 'Test notification',
+          sentBody: body,
+          note: 'The push service accepted it. If nothing appears, the message was dropped between the service and the device — check the app is installed from the home screen and notifications are allowed for it in Android settings.'
+        });
+      } catch (err) {
+        return res.status(200).json({
+          test: true, ok: false,
+          pushServiceStatus: err.statusCode || null,
+          pushServiceBody: err.body ? String(err.body).slice(0, 300) : null,
+          error: String(err && err.message || err),
+          endpointHost: (sub.endpoint || '').split('/')[2] || null,
+          hint: (err.statusCode === 404 || err.statusCode === 410)
+            ? 'The subscription has expired. Turn the reminder off and on again in the app.'
+            : (err.statusCode === 403
+               ? 'The push service rejected the credentials — the VAPID keys on the server do not match the one the app subscribed with.'
+               : null)
+        });
+      }
+    }
 
     if (missing.length === 0) {
       return res.status(200).json({ sent: false, reason: 'day already complete', date: today });
