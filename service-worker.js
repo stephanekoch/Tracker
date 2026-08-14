@@ -12,8 +12,9 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Tracker', {
       body: data.body || '',
-      // No `icon` — Android renders that as a large image on the right, in
-      // addition to the small app icon it already shows on the left.
+      // A fully transparent image, not an omitted one: leaving icon unset makes
+      // Android fill the slot with a generated letter avatar instead.
+      icon: '/blank.png',
       badge: '/icon-192.png',
       tag: 'daily-reminder',        // replaces rather than stacks
       renotify: false,

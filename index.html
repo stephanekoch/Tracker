@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v68</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v69</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -258,22 +258,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
         </div>
       </div>
       <button class="save-btn" id="save-btn" onclick="handleSave()">Save to Sheet</button>
-      <div class="card" id="notif-card" style="display:none;">
-        <div class="sec">Reminders</div>
-        <div class="toggle-row" onclick="toggleReminders()">
-          <div class="track" id="track-notif" style="background:#eeeeee"><div class="thumb" id="thumb-notif" style="left:3px"></div></div>
-          <div>
-            <div class="tgl-lbl">Evening reminder</div>
-            <div class="tgl-sub" id="notif-sub">A nudge at 9pm listing what is left</div>
-          </div>
-        </div>
-        <button id="notif-test" onclick="event.stopPropagation();sendTestNotification()"
-          style="width:100%;margin-top:11px;border:1px solid var(--border);background:transparent;
-          color:var(--text2);border-radius:9px;padding:9px;font-family:'Inter',sans-serif;
-          font-size:13px;font-weight:600;cursor:pointer;">Send a test notification</button>
-        <div id="notif-test-out" style="display:none;font-size:12px;line-height:1.55;margin-top:9px;
-          padding:9px 11px;border-radius:8px;"></div>
-      </div>
+
     </div>
 
     <!-- DASHBOARD -->
@@ -1625,10 +1610,17 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row("version","v68");
+  row("version","v69");
   row('last load error', window.__lastLoadError || 'none');
   row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
   const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
+  const ps = (typeof Notification==='undefined') ? 'not supported'
+    : (Notification.permission==='granted' ? (window.__pushState||'on') : Notification.permission);
+  row('reminders', ps === 'on' || ps === 'granted'
+    ? '<span style="color:#4a9e6a">on — 9pm daily</span>'
+    : '<span style="color:#c0392b">'+ps+'</span> <button onclick="enableRemindersManually()" '
+      +'style="margin-left:6px;border:1px solid #e85d40;background:transparent;color:#e85d40;'
+      +'border-radius:6px;padding:2px 8px;font-family:Inter,sans-serif;font-size:11px;cursor:pointer;">Enable</button>');
   const ls=window.__lastSave;
   row('last save', ls ? ('mood sent "'+(ls.moodSent||'')+'" → written "'+(ls.moodWritten||'')+'"'
       + (ls.moodError?' <span style="color:#c0392b">'+ls.moodError+'</span>':'')
@@ -1686,99 +1678,45 @@ function urlB64ToUint8Array(base64String){
   return out;
 }
 
-function setNotifToggle(on){
-  const t=document.getElementById('track-notif'), th=document.getElementById('thumb-notif');
-  if(!t) return;
-  t.style.background = on ? '#e85d40' : '#eeeeee';
-  th.style.left = on ? '23px' : '3px';
-}
 
-function setNotifSub(msg){
-  const el=document.getElementById('notif-sub');
-  if(el) el.textContent = msg;
-}
 
+// Reminders are on by default and maintain themselves. A browser will not let
+// us *request* permission without a tap, so the only case needing manual action
+// is a fresh install — handled from the diagnostics panel.
 async function initPush(){
-  const card=document.getElementById('notif-card');
-  if(!pushSupported()){
-    if(card){
-      card.style.display='block';
-      setNotifSub('Not supported in this browser. On Android, open the app from your home screen.');
-      document.getElementById('track-notif').style.opacity='.4';
-    }
-    return;
-  }
-  if(card) card.style.display='block';
-  try{
-    swReg = await navigator.serviceWorker.register('/service-worker.js');
-    const existing = await swReg.pushManager.getSubscription();
-    if(existing && Notification.permission === 'granted'){
-      setNotifToggle(true);
-      setNotifSub('On — 9pm, only when something is outstanding');
-    } else {
-      setNotifToggle(false);
-      setNotifSub('A nudge at 9pm listing what is left');
-    }
-  }catch(e){
-    console.warn('Service worker registration failed:', e);
-    setNotifSub('Could not set up reminders: '+(e.message||e));
-  }
-}
-
-async function sendTestNotification(){
-  const out=document.getElementById('notif-test-out');
-  const btn=document.getElementById('notif-test');
-  btn.disabled=true; btn.textContent='Sending…';
-  out.style.display='block';
-  out.style.background='#f6f6f6'; out.style.color='var(--text2)';
-  out.textContent='Asking the server to send one now…';
-  try{
-    const r = await fetch('/api/remind?test=1', {cache:'no-store'}).then(x=>x.json());
-    if(r.ok){
-      out.style.background='#eaf6ee'; out.style.color='#2f6a45';
-      out.innerHTML='<b>Accepted by '+(r.endpointHost||'the push service')+'</b> (status '
-        +(r.pushServiceStatus||'?')+').<br>Sent: “'+r.sentTitle+' — '+r.sentBody+'”'
-        +'<br><br>If nothing appeared, the message was dropped after the push service accepted it. '
-        +'Check the app was opened from your home screen shortcut, and that notifications are allowed '
-        +'for it under Android Settings → Apps.';
-    } else {
-      out.style.background='#fdecea'; out.style.color='#8a2b1a';
-      out.innerHTML='<b>Failed</b>'+(r.pushServiceStatus?' (status '+r.pushServiceStatus+')':'')
-        +'<br>'+(r.error||'')+(r.hint?'<br><br>'+r.hint:'')
-        +(r.pushServiceBody?'<br><br><span style="font-family:ui-monospace,monospace;font-size:11px;">'
-          +String(r.pushServiceBody).replace(/</g,'&lt;')+'</span>':'');
-    }
-  }catch(e){
-    out.style.background='#fdecea'; out.style.color='#8a2b1a';
-    out.textContent='Could not reach the server: '+(e.message||e);
-  }
-  btn.disabled=false; btn.textContent='Send a test notification';
-}
-
-async function toggleReminders(){
   if(!pushSupported()) return;
   try{
-    if(!swReg) swReg = await navigator.serviceWorker.register('/service-worker.js');
-    const existing = await swReg.pushManager.getSubscription();
-
-    if(existing){                                  // turn off
-      await existing.unsubscribe();
+    swReg = await navigator.serviceWorker.register('/service-worker.js');
+    if(Notification.permission !== 'granted') return;
+    let sub = await swReg.pushManager.getSubscription();
+    if(!sub){
+      // Permission is granted but the subscription has lapsed — quietly renew it
+      sub = await swReg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC)
+      });
       await fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({subscription:null})});
-      setNotifToggle(false);
-      setNotifSub('A nudge at 9pm listing what is left');
-      return;
+        body:JSON.stringify({subscription:sub})});
     }
+    window.__pushState = 'on';
+  }catch(e){
+    window.__pushState = 'error: '+(e.message||e);
+    console.warn('Push setup failed:', e);
+  }
+}
 
+// Only reachable from the diagnostics panel, for the fresh-install case
+async function enableRemindersManually(){
+  if(!pushSupported()){ alert('This browser cannot show notifications. Open the app from your home screen shortcut.'); return; }
+  try{
+    if(!swReg) swReg = await navigator.serviceWorker.register('/service-worker.js');
     const perm = await Notification.requestPermission();
     if(perm !== 'granted'){
-      setNotifToggle(false);
-      setNotifSub(perm === 'denied'
-        ? 'Blocked. Allow notifications for this app in your phone settings.'
-        : 'A nudge at 9pm listing what is left');
+      alert(perm === 'denied'
+        ? 'Notifications are blocked. Allow them for this app in Android Settings → Apps.'
+        : 'Permission was not granted.');
       return;
     }
-
     const sub = await swReg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC)
@@ -1786,15 +1724,12 @@ async function toggleReminders(){
     const r = await fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({subscription:sub})}).then(x=>x.json());
     if(r && r.error) throw new Error(r.error);
-
-    setNotifToggle(true);
-    setNotifSub('On — 9pm, only when something is outstanding');
-  }catch(e){
-    console.warn('Reminder toggle failed:', e);
-    setNotifToggle(false);
-    setNotifSub('Could not enable: '+(e.message||e));
-  }
+    window.__pushState = 'on';
+    alert('Evening reminders are on.');
+  }catch(e){ alert('Could not enable reminders: '+(e.message||e)); }
 }
+
+
 
 // Init — render from the local cache first, then refresh in the background.
 // Apps Script cold-starts take seconds and sometimes fail outright; caching
