@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v61</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v62</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -181,6 +181,8 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 
   <!-- Content -->
   <div class="content" id="content">
+    <div id="load-error" style="display:none;background:#fdecea;border:1px solid #f5c6bd;
+      border-radius:12px;padding:14px;margin-bottom:12px;color:#8a2b1a;font-size:14px;"></div>
 
     <!-- LOG -->
     <div id="tab-log" class="hidden">
@@ -1596,7 +1598,8 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v61');
+  row('version','v62');
+  row('last load error', window.__lastLoadError || 'none');
   row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
   const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
   const ls=window.__lastSave;
@@ -1686,6 +1689,32 @@ function applyData(rows, goalObj, fromCache){
   setSyncState(fromCache ? 'stale' : 'fresh');
 }
 
+// An empty screen tells you nothing. Show what actually went wrong.
+function showLoadError(msg){
+  setSyncState('offline');
+  const box=document.getElementById('load-error');
+  if(!box) return;
+  let hint='';
+  if(/<!DOCTYPE|Unexpected token/i.test(msg))
+    hint='Google returned a login or consent page instead of data. In the Apps Script editor, run <b>getAllRows</b> once and accept any permission prompt, then check Deploy → Manage deployments → <b>Who has access</b> is set to <b>Anyone</b>.';
+  else if(/Sheet tab not found/i.test(msg))
+    hint='The script cannot find the Tracker tab — check the tab name and spreadsheet ID.';
+  else if(/exceeds|range/i.test(msg))
+    hint='The script asked for a range outside the sheet. Deploy the latest Apps Script version.';
+  else if(/Failed to fetch|NetworkError|offline/i.test(msg))
+    hint='No connection reached the server.';
+  box.innerHTML='<div style="font-weight:600;margin-bottom:5px;">Could not load your data</div>'
+    +'<div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;'
+    +'border:1px solid #f2c9c0;border-radius:7px;padding:8px;margin-bottom:8px;word-break:break-word;">'
+    +msg.replace(/</g,'&lt;').slice(0,300)+'</div>'
+    +(hint?'<div style="font-size:13px;line-height:1.55;">'+hint+'</div>':'')
+    +'<button onclick="document.getElementById(\'load-error\').style.display=\'none\';loadData()" '
+    +'style="margin-top:10px;border:1px solid var(--accent);background:transparent;color:var(--accent);'
+    +'border-radius:8px;padding:7px 14px;font-family:\'Inter\',sans-serif;font-size:13px;font-weight:600;'
+    +'cursor:pointer;">Try again</button>';
+  box.style.display='block';
+}
+
 function setSyncState(state){
   const el = document.getElementById('sync-note');
   if(!el) return;
@@ -1717,8 +1746,9 @@ function loadData(attempt){
     writeCache(d.rows, g ? (g.goal||null) : null);
   }).catch(err=>{
     console.warn('Load attempt '+attempt+' failed:', err);
+    window.__lastLoadError = String(err && err.message || err);
     if(attempt < 3){ setTimeout(()=>loadData(attempt+1), 1200*attempt); }
-    else { setSyncState(cached ? 'offline' : 'offline'); }
+    else { showLoadError(window.__lastLoadError); }
   });
 }
 loadData();
