@@ -160,7 +160,8 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v60</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v61</span></div>
+        <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
@@ -603,7 +604,11 @@ function doSave(form){
   const btn=document.getElementById('save-btn'); btn.textContent='Saving…'; btn.disabled=true;
   fetch(API,{method:'POST',body:JSON.stringify({action:'saveRow',...form})})
     .then(r=>r.json())
-    .then(()=>{
+    .then(res=>{
+      window.__lastSave = res;
+      if(res && res.moodSent && !res.moodWritten){
+        console.warn('Mood was sent but not written:', res);
+      }
       const idx=entries.findIndex(e=>e.date===form.date);
       if(idx>=0) entries[idx]=form; else { entries.push(form); entries.sort((a,b)=>a.date.localeCompare(b.date)); }
       btn.textContent='Save to Sheet'; btn.disabled=false; setDot('#4a9e6a','Synced with your Google Sheet');
@@ -1591,9 +1596,17 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v60');
+  row('version','v61');
+  row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
+  const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
+  const ls=window.__lastSave;
+  row('last save', ls ? ('mood sent "'+(ls.moodSent||'')+'" → written "'+(ls.moodWritten||'')+'"'
+      + (ls.moodError?' <span style="color:#c0392b">'+ls.moodError+'</span>':'')
+      + (ls.maxColumns?' · sheet has '+ls.maxColumns+' columns':'')) : 'none yet this session');
   row('today',todayStr());
   row('entries loaded',entries.length);
+  const nMood = entries.filter(e=>e.mood).length;
+  row('entries with mood', nMood ? nMood : '<span style="color:#c0392b">0 — nothing is coming back from column P</span>');
   row('with bodyweight',bw.length);
   if(bw.length){
     row('first reading',bw[0].date);
@@ -1622,33 +1635,97 @@ function showDiag(){
   document.getElementById('diag-modal').classList.remove('hidden');
 }
 
-// Init — load from Sheets with retry
-document.getElementById('entry-date').value=todayStr();
-blankForm(todayStr());
+// Init — render from the local cache first, then refresh in the background.
+// Apps Script cold-starts take seconds and sometimes fail outright; caching
+// means the app is usable immediately and a slow request stops mattering.
+const CACHE_KEY = 'tracker-cache-v1';
 
-function loadData(attempt){
-  attempt = attempt||1;
-  setDot('#d0d0d0','Loading from your sheet…');
-  fetch(API+'?action=getAll', {cache:'no-store'})
-    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(d=>{
-      entries=d.rows||[];
-      const today=entries.find(e=>e.date===todayStr());
-      if(today) fillForm(today); else blankForm(todayStr());
-      setDot('#4a9e6a','Synced with your Google Sheet');
-      updateHeaderStreak();
-      loadGoal().then(()=>{ updateTargetHints(); renderDashboard(); });
-    })
-    .catch(err=>{
-      if(attempt<3){
-        setTimeout(()=>loadData(attempt+1), 1500*attempt);
+function readCache(){
+  try{
+    const raw = localStorage.getItem(CACHE_KEY);
+    if(!raw) return null;
+    const c = JSON.parse(raw);
+    return (c && Array.isArray(c.rows)) ? c : null;
+  }catch(e){ return null; }
+}
+function writeCache(rows, goalObj){
+  try{
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      rows: rows, goal: goalObj || null, at: Date.now()
+    }));
+  }catch(e){ /* quota or private mode — not worth failing over */ }
+}
+
+function applyData(rows, goalObj, fromCache){
+  entries = rows || [];
+  if(goalObj !== undefined){
+    goal = goalObj || null;
+    if(goal){
+      goal.deadline    = normDate(goal.deadline);
+      goal.createdDate = normDate(goal.createdDate);
+      goal.targetWeight = Number(goal.targetWeight);
+      goal.startWeight  = Number(goal.startWeight);
+      if(!isValidDate(goal.deadline) || !isValidDate(goal.createdDate)
+         || !isFinite(goal.targetWeight) || !isFinite(goal.startWeight)
+         || goal.deadline <= goal.createdDate){
+        goal = null;
       } else {
-        setDot('#e85d40');
-        console.warn('Failed to load data after 3 attempts:', err);
+        goal._k = curveExponent();
       }
-    });
+    }
+  }
+  const cur = document.getElementById('entry-date').value || todayStr();
+  const e = entries.find(x=>x.date===cur);
+  if(e) fillForm(e); else blankForm(cur);
+  updateHeaderStreak();
+  updateTargetHints();
+  const dash = document.getElementById('tab-dashboard');
+  if(dash && !dash.classList.contains('hidden')) renderDashboard();
+  const hist = document.getElementById('tab-history');
+  if(hist && !hist.classList.contains('hidden')) renderHistory();
+  setSyncState(fromCache ? 'stale' : 'fresh');
+}
+
+function setSyncState(state){
+  const el = document.getElementById('sync-note');
+  if(!el) return;
+  if(state === 'fresh'){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = state === 'stale'
+    ? 'Showing saved data · refreshing…'
+    : 'Offline · showing saved data';
+  el.style.color = state === 'offline' ? '#c0392b' : 'var(--muted)';
+}
+
+document.getElementById('entry-date').value = todayStr();
+
+// 1. Paint from cache immediately
+const cached = readCache();
+if(cached){ applyData(cached.rows, cached.goal, true); }
+else { blankForm(todayStr()); }
+
+// 2. Refresh from the sheet in the background
+function loadData(attempt){
+  attempt = attempt || 1;
+  Promise.all([
+    fetch(API+'?action=getAll',  {cache:'no-store'}).then(r=>r.json()),
+    fetch(API+'?action=getGoal', {cache:'no-store'}).then(r=>r.json()).catch(()=>({goal:null}))
+  ]).then(([d, g])=>{
+    if(!d || !Array.isArray(d.rows)) throw new Error(d && d.error ? d.error : 'bad payload');
+    if(d.scriptVersion) window.__scriptVersion = d.scriptVersion;
+    applyData(d.rows, g ? (g.goal||null) : null, false);
+    writeCache(d.rows, g ? (g.goal||null) : null);
+  }).catch(err=>{
+    console.warn('Load attempt '+attempt+' failed:', err);
+    if(attempt < 3){ setTimeout(()=>loadData(attempt+1), 1200*attempt); }
+    else { setSyncState(cached ? 'offline' : 'offline'); }
+  });
 }
 loadData();
-</script>
-</body>
-</html>
+
+// Refresh when the app is brought back to the foreground
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden) loadData();
+});
+
+
