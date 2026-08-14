@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v58</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v60</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
         <div id="hdr-streak" style="display:none;text-align:right;line-height:1.1;">
@@ -544,6 +544,7 @@ function setMood(m){
 }
 
 function readForm(){
+  refreshVitality();   // never trust stale state at save time
   const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
   const sleep = (document.getElementById('sleep-txt').value||'').trim();
   return { date:document.getElementById('entry-date').value, gym:toggles.gym, mood:mood, vitalityPoints:vit,
@@ -1549,7 +1550,6 @@ function showStatusInfo(){
   if(!st){
     box.innerHTML='<p>No goal, or no bodyweight logged since the goal began.</p>';
   } else {
-    const pct=(st.ratio-1)*100;
     const rows=st.rows.map(r=>
       '<tr>'
       +'<td style="padding:3px 10px 3px 0;color:var(--muted);white-space:nowrap;">'+fmtDate(r.date)+'</td>'
@@ -1580,9 +1580,6 @@ function showStatusInfo(){
       +'<span>Target average</span><b style="color:#2f8f5b;">'+st.targetAvg.toFixed(2)+' kg</b></div>'
 
       +'<div style="display:flex;justify-content:space-between;padding-top:9px;border-top:1px solid #eee;">'
-      +'<span>Actual ÷ target</span><b style="color:'+(st.gap>0.15?'#c0392b':'#2f6a45')+';">'
-      +st.ratio.toFixed(4)+'  ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</b></div>'
-      +'<div style="display:flex;justify-content:space-between;margin-top:4px;">'
       +'<span>Difference</span><b style="color:'+(st.gap>0.15?'#c0392b':'#2f6a45')+';">'
       +(st.gap>0?'+':'')+st.gap.toFixed(2)+' kg</b></div>'
       +'</div>';
@@ -1594,7 +1591,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row('version','v58');
+  row('version','v60');
   row('today',todayStr());
   row('entries loaded',entries.length);
   row('with bodyweight',bw.length);
