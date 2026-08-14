@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v63</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v64</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -207,12 +207,12 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           </div>
           <div id="vit-why" style="font-size:12px;color:var(--muted);margin-top:6px;">Add steps or a gym session</div>
         </div>
-        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="fmtSteps(this);refreshVitality();updateProgress()"/></div>
-        <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="updateProgress()"/><div id="bw-target-hint"></div></div>
-        <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="updateProgress()"/><div id="cal-target-hint"></div></div>
+        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="markDirty();fmtSteps(this);refreshVitality();updateProgress()"/></div>
+        <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="markDirty();updateProgress()"/><div id="bw-target-hint"></div></div>
+        <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="markDirty();updateProgress()"/><div id="cal-target-hint"></div></div>
         <div class="field">
           <div class="field-lbl">Sleep (h:mm)</div>
-          <input type="text" id="sleep-txt" placeholder="e.g. 7:30" oninput="updateProgress()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;"/>
+          <input type="text" id="sleep-txt" placeholder="e.g. 7:30" oninput="markDirty();updateProgress()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;"/>
         </div>
       </div>
       <div class="card" id="mood-card">
@@ -246,7 +246,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           <div><div class="tgl-lbl">HackChinese</div><div class="tgl-sub">Vocabulary flashcards</div></div>
         </div>
         <div id="words-wrap" class="indent hidden">
-          <div class="field"><div class="field-lbl">Words known</div><input type="number" id="hackChineseWords" placeholder="0"/></div>
+          <div class="field"><div class="field-lbl">Words known</div><input type="number" id="hackChineseWords" placeholder="0" oninput="markDirty()"/></div>
         </div>
         <div class="toggle-row" onclick="tgl('duChinese')">
           <div class="track" id="track-duChinese" style="background:#eeeeee"><div class="thumb" id="thumb-duChinese" style="left:3px"></div></div>
@@ -488,6 +488,8 @@ function fmtSteps(el){
 
 // Toggles
 function tgl(key){
+  markDirty();
+
   toggles[key]=!toggles[key];
   document.getElementById('track-'+key).style.background=toggles[key]?'#e85d40':'#eeeeee';
   document.getElementById('thumb-'+key).style.left=toggles[key]?'23px':'3px';
@@ -537,6 +539,8 @@ function refreshMoodOptional(){
 }
 
 function setMood(m){
+  markDirty();
+
   mood = (mood===m) ? '' : m;     // tapping the active one clears it
   ['good','normal','bad'].forEach(x=>{
     document.getElementById('mood-'+x).classList.toggle('on', x===mood);
@@ -545,6 +549,11 @@ function setMood(m){
   card.className='card'+(mood?' wash-'+mood:'');
   updateProgress();
 }
+
+let formDirty = false;
+function markDirty(){ formDirty = true; }
+function clearDirty(){ formDirty = false; }
+function formIsDirty(){ return formDirty; }
 
 function readForm(){
   refreshVitality();   // never trust stale state at save time
@@ -586,6 +595,7 @@ function blankForm(date){
   fillForm({date,gym:false,mood:'',vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
 }
 function onDateChange(){
+  clearDirty();
   const date=document.getElementById('entry-date').value;
   const ex=entries.find(e=>e.date===date);
   if(ex) fillForm(ex); else blankForm(date);
@@ -608,6 +618,7 @@ function doSave(form){
     .then(r=>r.json())
     .then(res=>{
       window.__lastSave = res;
+      clearDirty();
       if(res && res.moodSent && !res.moodWritten){
         console.warn('Mood was sent but not written:', res);
       }
@@ -1598,7 +1609,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row("version","v63");
+  row("version","v64");
   row('last load error', window.__lastLoadError || 'none');
   row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
   const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
@@ -1677,9 +1688,13 @@ function applyData(rows, goalObj, fromCache){
       }
     }
   }
+  // Never overwrite the form while it is being edited. A background refresh
+  // landing mid-entry used to wipe the selection the person had just made.
   const cur = document.getElementById('entry-date').value || todayStr();
-  const e = entries.find(x=>x.date===cur);
-  if(e) fillForm(e); else blankForm(cur);
+  if(!formIsDirty()){
+    const e = entries.find(x=>x.date===cur);
+    if(e) fillForm(e); else blankForm(cur);
+  }
   updateHeaderStreak();
   updateTargetHints();
   const dash = document.getElementById('tab-dashboard');
