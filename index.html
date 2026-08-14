@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v64</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v65</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -258,6 +258,16 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
         </div>
       </div>
       <button class="save-btn" id="save-btn" onclick="handleSave()">Save to Sheet</button>
+      <div class="card" id="notif-card" style="display:none;">
+        <div class="sec">Reminders</div>
+        <div class="toggle-row" onclick="toggleReminders()">
+          <div class="track" id="track-notif" style="background:#eeeeee"><div class="thumb" id="thumb-notif" style="left:3px"></div></div>
+          <div>
+            <div class="tgl-lbl">Evening reminder</div>
+            <div class="tgl-sub" id="notif-sub">A nudge at 9pm listing what is left</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- DASHBOARD -->
@@ -1609,7 +1619,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row("version","v64");
+  row("version","v65");
   row('last load error', window.__lastLoadError || 'none');
   row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
   const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
@@ -1647,6 +1657,107 @@ function showDiag(){
   }
   document.getElementById('diag-body').innerHTML=L.join('');
   document.getElementById('diag-modal').classList.remove('hidden');
+}
+
+/* ══ Push reminders ══════════════════════════════════════
+   Registers a service worker and stores the subscription in the sheet.
+   A Vercel cron job at 20:00 UTC does the actual sending.
+   ══════════════════════════════════════════════════════ */
+
+const VAPID_PUBLIC = 'BNUTMZ4PMhoAbOZSBAokQBAvxHyziLvoIvkKUv1Dc4P1VFqtKYsTtKnwIRRMMGDpZlFhNLitlnr9AXde9yAUgUM';
+let swReg = null;
+
+function pushSupported(){
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+function urlB64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const b64 = (base64String + padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw = atob(b64);
+  const out = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function setNotifToggle(on){
+  const t=document.getElementById('track-notif'), th=document.getElementById('thumb-notif');
+  if(!t) return;
+  t.style.background = on ? '#e85d40' : '#eeeeee';
+  th.style.left = on ? '23px' : '3px';
+}
+
+function setNotifSub(msg){
+  const el=document.getElementById('notif-sub');
+  if(el) el.textContent = msg;
+}
+
+async function initPush(){
+  const card=document.getElementById('notif-card');
+  if(!pushSupported()){
+    if(card){
+      card.style.display='block';
+      setNotifSub('Not supported in this browser. On Android, open the app from your home screen.');
+      document.getElementById('track-notif').style.opacity='.4';
+    }
+    return;
+  }
+  if(card) card.style.display='block';
+  try{
+    swReg = await navigator.serviceWorker.register('/service-worker.js');
+    const existing = await swReg.pushManager.getSubscription();
+    if(existing && Notification.permission === 'granted'){
+      setNotifToggle(true);
+      setNotifSub('On — 9pm, only when something is outstanding');
+    } else {
+      setNotifToggle(false);
+      setNotifSub('A nudge at 9pm listing what is left');
+    }
+  }catch(e){
+    console.warn('Service worker registration failed:', e);
+    setNotifSub('Could not set up reminders: '+(e.message||e));
+  }
+}
+
+async function toggleReminders(){
+  if(!pushSupported()) return;
+  try{
+    if(!swReg) swReg = await navigator.serviceWorker.register('/service-worker.js');
+    const existing = await swReg.pushManager.getSubscription();
+
+    if(existing){                                  // turn off
+      await existing.unsubscribe();
+      await fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({subscription:null})});
+      setNotifToggle(false);
+      setNotifSub('A nudge at 9pm listing what is left');
+      return;
+    }
+
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){
+      setNotifToggle(false);
+      setNotifSub(perm === 'denied'
+        ? 'Blocked. Allow notifications for this app in your phone settings.'
+        : 'A nudge at 9pm listing what is left');
+      return;
+    }
+
+    const sub = await swReg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC)
+    });
+    const r = await fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({subscription:sub})}).then(x=>x.json());
+    if(r && r.error) throw new Error(r.error);
+
+    setNotifToggle(true);
+    setNotifSub('On — 9pm, only when something is outstanding');
+  }catch(e){
+    console.warn('Reminder toggle failed:', e);
+    setNotifToggle(false);
+    setNotifSub('Could not enable: '+(e.message||e));
+  }
 }
 
 // Init — render from the local cache first, then refresh in the background.
@@ -1767,6 +1878,7 @@ function loadData(attempt){
   });
 }
 loadData();
+initPush();
 
 // Refresh when the app is brought back to the foreground
 document.addEventListener('visibilitychange', ()=>{
