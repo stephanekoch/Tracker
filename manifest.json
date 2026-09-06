@@ -1,13 +1,13 @@
 {
-  "short_name": "Tracker",
-  "name": "Daily Tracker",
+  "short_name": "Workouts",
+  "name": "Workouts",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#ffffff",
-  "background_color": "#f0f7f0",
+  "theme_color": "#7c3aed",
+  "background_color": "#ffffff",
   "orientation": "portrait"
 }
