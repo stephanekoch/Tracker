@@ -1,0 +1,186 @@
+// Called by Vercel Cron at 18:00 UTC (19:00 London in summer, 18:00 in winter). Works out what is still outstanding for
+// today and pushes a single notification. Sends nothing if the day is done.
+
+import webpush from 'web-push';
+
+const SUPABASE_URL = 'https://bhyjfyjydbaeoxipvsqq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_N4rk_9nA_oVu6AHC8qW4tQ_pARMMDLW';
+const SB = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+
+// Mood only became required from this date — matches the app's own rule.
+const MOOD_REQUIRED_FROM = '2026-08-12';
+
+// London date, not UTC: at 20:00 UTC in summer it is already 21:00 locally,
+// and using the UTC date would be wrong either side of midnight.
+function londonToday() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+
+// Same fields the ring counts, in the order they appear in the app.
+function outstanding(row, date) {
+  if (!row) {
+    const base = ['Steps', 'Bodyweight', 'Calories', 'Sleep', 'HackChinese', 'DuChinese', 'Yoyo'];
+    return date >= MOOD_REQUIRED_FROM ? base.concat('Mood') : base;
+  }
+  const missing = [];
+  if (!row.steps) missing.push('Steps');
+  if (!row.bodyweight) missing.push('Bodyweight');
+  if (!row.calories) missing.push('Calories');
+  if (!row.sleep) missing.push('Sleep');
+  if (date >= MOOD_REQUIRED_FROM && !row.mood) missing.push('Mood');
+  if (!row.hackChinese) missing.push('HackChinese');
+  if (!row.duChinese) missing.push('DuChinese');
+  if (!row.yoyoChinese) missing.push('Yoyo');
+  return missing;
+}
+
+export default async function handler(req, res) {
+  // ?check=1 reports what would be sent without sending anything, and without
+  // needing the cron secret. Useful for confirming setup rather than waiting
+  // until the evening to find out something is misconfigured.
+  const isCheck = req.query && (req.query.check === '1' || req.query.check === 'true');
+  // ?test=1 sends immediately regardless of what is outstanding, and reports
+  // exactly what the push service said. Removes cron from the equation.
+  const isTest = req.query && (req.query.test === '1' || req.query.test === 'true');
+
+  // Vercel signs cron requests; reject anything else in production
+  const secret = process.env.CRON_SECRET;
+  if (secret && !isCheck && !isTest) {
+    const auth = req.headers.authorization || '';
+    if (auth !== `Bearer ${secret}`) return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const pub = process.env.VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+
+  if (isCheck && (!pub || !priv)) {
+    return res.status(200).json({
+      check: true, ready: false,
+      problem: 'VAPID keys are not set on this deployment',
+      vapidPublicSet: !!pub, vapidPrivateSet: !!priv,
+      cronSecretSet: !!secret,
+      fix: 'Add VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in Vercel → Settings → Environment Variables, then redeploy. Variables only apply to builds made after they are set.'
+    });
+  }
+  if (!pub || !priv) return res.status(500).json({ error: 'VAPID keys not configured' });
+  webpush.setVapidDetails('mailto:tracker@example.com', pub, priv);
+
+  try {
+    const today = londonToday();
+
+    const [rowRes, subRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?date=eq.${today}&select=*`, { headers: SB }),
+      fetch(`${SUPABASE_URL}/rest/v1/tracker_settings?key=eq.push_subscription&select=value`, { headers: SB })
+    ]);
+    if (!rowRes.ok) return res.status(502).json({ error: 'Supabase entries query failed', preview: (await rowRes.text()).slice(0, 160) });
+    if (!subRes.ok) return res.status(502).json({ error: 'Supabase settings query failed', preview: (await subRes.text()).slice(0, 160) });
+    const rowsRaw = await rowRes.json();
+    const subRows = await subRes.json();
+    // Map to the field names the outstanding() check expects
+    const rows = rowsRaw.map(r => ({
+      date: r.date, steps: r.steps, bodyweight: r.bodyweight, calories: r.calories, sleep: r.sleep,
+      mood: r.mood, hackChinese: r.hack_chinese, duChinese: r.du_chinese, yoyoChinese: r.yoyo_chinese
+    }));
+    const subWrap = { subscription: subRows.length ? (subRows[0].value || '') : '' };
+
+    if (!subWrap.subscription) {
+      return res.status(200).json({
+        check: isCheck || undefined, ready: isCheck ? false : undefined,
+        sent: false, reason: 'no subscription stored',
+        fix: 'Open the app from your home screen shortcut and switch on Evening reminder at the foot of the Log tab.'
+      });
+    }
+
+    const row = rows.find(r => r.date === today);
+    const missing = outstanding(row, today);
+
+    if (isTest) {
+      let sub;
+      try { sub = JSON.parse(subWrap.subscription); }
+      catch (e) { return res.status(200).json({ test: true, ok: false, error: 'stored subscription is not valid JSON' }); }
+      const body = missing.length ? missing.join(' · ') : 'Nothing outstanding — this is a test';
+      try {
+        const result = await webpush.sendNotification(sub, JSON.stringify({
+          title: missing.length
+            ? `${missing.length} action${missing.length === 1 ? '' : 's'} left today`
+            : 'Test notification',
+          body
+        }));
+        return res.status(200).json({
+          test: true, ok: true,
+          pushServiceStatus: result && result.statusCode,
+          endpointHost: (sub.endpoint || '').split('/')[2] || null,
+          sentTitle: missing.length ? `${missing.length} actions left today` : 'Test notification',
+          sentBody: body,
+          note: 'The push service accepted it. If nothing appears, the message was dropped between the service and the device — check the app is installed from the home screen and notifications are allowed for it in Android settings.'
+        });
+      } catch (err) {
+        return res.status(200).json({
+          test: true, ok: false,
+          pushServiceStatus: err.statusCode || null,
+          pushServiceBody: err.body ? String(err.body).slice(0, 300) : null,
+          error: String(err && err.message || err),
+          endpointHost: (sub.endpoint || '').split('/')[2] || null,
+          hint: (err.statusCode === 404 || err.statusCode === 410)
+            ? 'The subscription has expired. Turn the reminder off and on again in the app.'
+            : (err.statusCode === 403
+               ? 'The push service rejected the credentials — the VAPID keys on the server do not match the one the app subscribed with.'
+               : null)
+        });
+      }
+    }
+
+    if (missing.length === 0) {
+      return res.status(200).json({ sent: false, reason: 'day already complete', date: today });
+    }
+
+    if (isCheck) {
+      return res.status(200).json({
+        check: true, ready: true,
+        londonDate: today,
+        londonTimeNow: new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit'
+        }).format(new Date()),
+        rowFoundForToday: !!row,
+        outstanding: missing,
+        wouldSend: missing.length > 0,
+        wouldSay: missing.length
+          ? `${missing.length} action${missing.length === 1 ? '' : 's'} left today — ${missing.join(' · ')}`
+          : '(nothing — day already complete)',
+        subscriptionStored: true,
+        vapidPublicSet: !!pub, vapidPrivateSet: !!priv, cronSecretSet: !!secret
+      });
+    }
+
+    const payload = JSON.stringify({
+      title: `${missing.length} action${missing.length === 1 ? '' : 's'} left today`,
+      body: missing.join(' · ')
+    });
+
+    let sub;
+    try { sub = JSON.parse(subWrap.subscription); }
+    catch (e) { return res.status(500).json({ error: 'stored subscription is not valid JSON' }); }
+
+    try {
+      await webpush.sendNotification(sub, payload);
+    } catch (err) {
+      // 404/410 mean the browser dropped the subscription — clear it so we stop trying
+      if (err.statusCode === 404 || err.statusCode === 410) {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'saveSubscription', subscription: '' }),
+          redirect: 'follow'
+        });
+        return res.status(200).json({ sent: false, reason: 'subscription expired, cleared' });
+      }
+      throw err;
+    }
+
+    return res.status(200).json({ sent: true, date: today, count: missing.length, missing });
+  } catch (err) {
+    return res.status(500).json({ error: String(err && err.message || err) });
+  }
+}
