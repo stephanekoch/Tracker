@@ -117,10 +117,6 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
   padding:0;display:inline-flex;align-items:center;justify-content:center;opacity:.75;}
 .pill-info:hover{opacity:1;}
 .chart-legend{display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
-.chart-hl{display:flex;align-items:baseline;gap:6px;margin-bottom:4px;flex-wrap:wrap;}
-.chart-hn{font-size:30px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1;}
-.chart-hu{font-size:15px;color:var(--muted);}
-.chart-ha{font-size:14px;color:var(--muted);margin-left:auto;}
 .chart-legend span{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);}
 .legend-swatch{display:inline-block;width:16px;height:0;border-top:3px solid;border-radius:2px;}
 .legend-swatch.dash{border-top-style:dashed;border-top-color:#2f8f5b;border-top-width:4px;}
@@ -965,17 +961,6 @@ function buildMoodChart(filtered){
       +'<svg viewBox="0 0 500 180" style="width:100%;height:180px"><text x="250" y="90" text-anchor="middle" '
       +'fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No mood logged in this period</text></svg></div>';
   }
-  // Headline: share of good days across the range, and change vs previous week
-  const tot=ws.reduce((a,w)=>a+w.n,0), good=ws.reduce((a,w)=>a+w.good,0);
-  const pct=Math.round(good/tot*100);
-  let delta='';
-  if(ws.length>1 && ws[ws.length-1].n>=4){
-    const a=ws[ws.length-1], b=ws[ws.length-2];
-    const d=Math.round(a.good/a.n*100)-Math.round(b.good/b.n*100);
-    if(d!==0) delta=`<span style="font-size:15px;font-weight:600;color:${d>0?'#4a9e6a':'#e85d40'};margin-left:4px;">${d>0?'▲':'▼'} ${Math.abs(d)}%</span>`;
-  }
-  const headline=`<div class="chart-hl"><span class="chart-hn">${pct}%</span><span class="chart-hu">good days</span>${delta}<span class="chart-ha">${tot} days logged</span></div>`;
-
   const W=500,H=180,PL=16,PR=16,PT=8,PB=32,iW=W-PL-PR,iH=H-PT-PB;
   const toX=i=>PL+(i/Math.max(ws.length-1,1))*iW;
   // Boundaries: b1 = top of good band, b2 = top of normal band (0..1 from bottom)
@@ -1004,7 +989,7 @@ function buildMoodChart(filtered){
   const dot='<circle cx="'+last[0]+'" cy="'+last[1]+'" r="6" fill="#4a9e6a" stroke="white" stroke-width="2.5"/>';
   const xl='<text x="'+PL+'" y="'+(H-8)+'" font-size="16" fill="#888888">'+ws[0].label+'</text>'
     +(ws.length>1?'<text x="'+(W-PR)+'" y="'+(H-6)+'" text-anchor="end" font-size="16" fill="#888888">'+ws[ws.length-1].label+'</text>':'');
-  return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend+headline
+  return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend
     +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" font-family="Inter,sans-serif">'
     +bands+dot+xl+'</svg></div>';
 }
