@@ -73,7 +73,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .range-btn{flex:1;padding:9px 2px;border:none;border-radius:7px;background:transparent;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap;text-align:center;}
 .range-btn.active{background:var(--accent);color:white;font-weight:700;}
 .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;}
-.chart-ttl{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px;}
+.chart-ttl{font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px;}
 .study-pills{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
 .pill{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;color:var(--muted);white-space:nowrap;}
 .pill.active{background:var(--accent);color:white;border-color:var(--accent);}
@@ -118,11 +118,11 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .pill-info:hover{opacity:1;}
 .chart-legend{display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
 .chart-hl{display:flex;align-items:baseline;gap:6px;margin-bottom:2px;flex-wrap:wrap;}
-.chart-hn{font-size:28px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1;}
-.chart-hu{font-size:13px;color:var(--muted);}
-.chart-ha{font-size:12px;color:var(--muted);margin-left:auto;}
-.chart-legend span{font-size:12px;}
-.mood-legend span{font-size:12px;}
+.chart-hn{font-size:34px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1;}
+.chart-hu{font-size:16px;color:var(--muted);}
+.chart-ha{font-size:15px;color:var(--muted);margin-left:auto;}
+.chart-legend span{font-size:15px;}
+.mood-legend span{font-size:15px;}
 .legend-swatch.dash{border-top-width:3px;}
 .chart-legend span{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);}
 .legend-swatch{display:inline-block;width:16px;height:0;border-top:3px solid;border-radius:2px;}
@@ -730,13 +730,13 @@ function smoothPathRev(pts){ return smoothPath(pts.slice().reverse()); }
 function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts){
   opts = opts || {};
   const tgt = opts.targetData || null;
-  const W=500, H=170, PL=16, PR=16, PT=14, PB=26;
+  const W=500, H=220, PL=16, PR=16, PT=22, PB=34;
   const iW=W-PL-PR, iH=H-PT-PB;
   const nums=data.map(v=>{if(v===null||v===undefined||v==='') return null; const n=Number(v); return isNaN(n)?null:n;});
   const valid=nums.filter(v=>v!==null);
   const tgtValid = tgt ? tgt.filter(v=>v!==null&&v!==undefined&&!isNaN(v)) : [];
   if(!valid.length && !tgtValid.length)
-    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="15" font-family="Inter,sans-serif">No data for this period</text></svg>';
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No data for this period</text></svg>';
   const allVals = valid.concat(tgtValid);
   const dMin=Math.min(...allVals), dMax=Math.max(...allVals), aR=(dMax-dMin)||1;
   const yMin=dMin-aR*.15, yMax=dMax+aR*.15;
@@ -763,7 +763,7 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
   }
   const cid='c'+(++chartSeq);
   CHART_REG[cid]={labels:labels,data:nums,tgt:tgt||null,fmt:fmt,W:W,PL:PL,iW:iW,n:nums.length};
-  return '<svg data-cid="'+cid+'" onclick="chartTap(event)" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px;cursor:pointer;" font-family="Inter,sans-serif">'
+  return '<svg data-cid="'+cid+'" onclick="chartTap(event)" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;cursor:pointer;" font-family="Inter,sans-serif">'
     // Goal window tint — soft
     +(function(){
       const mi=opts.markIndex;
@@ -771,13 +771,13 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
       const mx=toX(mi), lbl=opts.markLabel||'';
       const flip = mx > PL+iW*0.52;
       return '<rect x="'+mx+'" y="'+PT+'" width="'+(W-PR-mx)+'" height="'+iH+'" rx="4" fill="#4a9e6a" fill-opacity="0.06"/>'
-        +(lbl?'<text x="'+(flip?mx-6:mx+6)+'" y="'+(PT+11)+'" text-anchor="'+(flip?'end':'start')+'" font-size="10" fill="#8a8a8a" font-weight="600">'+lbl+'</text>':'');
+        +(lbl?'<text x="'+(flip?mx-6:mx+6)+'" y="'+(PT+16)+'" text-anchor="'+(flip?'end':'start')+'" font-size="14" fill="#8a8a8a" font-weight="600">'+lbl+'</text>':'');
     })()
     // Baseline
     +'<line x1="'+PL+'" y1="'+(PT+iH)+'" x2="'+(W-PR)+'" y2="'+(PT+iH)+'" stroke="#eeeeee" stroke-width="1"/>'
     // Min / max corner markers
-    +'<text x="'+PL+'" y="'+(PT+9)+'" font-size="10" fill="#cccccc">'+fmtV(yMax,yAxisFmt||fmt)+'</text>'
-    +'<text x="'+PL+'" y="'+(PT+iH-4)+'" font-size="10" fill="#cccccc">'+fmtV(yMin,yAxisFmt||fmt)+'</text>'
+    +'<text x="'+PL+'" y="'+(PT+14)+'" font-size="15" fill="#aaaaaa">'+fmtV(yMax,yAxisFmt||fmt)+'</text>'
+    +'<text x="'+PL+'" y="'+(PT+iH-4)+'" font-size="15" fill="#aaaaaa">'+fmtV(yMin,yAxisFmt||fmt)+'</text>'
     // Target curve
     +(tp?'<path d="'+tp+'" fill="none" stroke="#2f8f5b" stroke-width="2" stroke-dasharray="6,5" stroke-linecap="round"/>':'')
     // Actual line
@@ -785,8 +785,8 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
     // Latest dot
     +(lv!==null?'<circle cx="'+lx+'" cy="'+ly+'" r="6" fill="'+color+'" stroke="white" stroke-width="2.5"/>':'')
     // X labels
-    +'<text x="'+PL+'" y="'+(H-8)+'" font-size="11" fill="#999999">'+labels[0]+'</text>'
-    +(lastIdx>0?'<text x="'+(W-PR)+'" y="'+(H-8)+'" text-anchor="end" font-size="11" fill="#999999">'+labels[lastIdx]+'</text>':'')
+    +'<text x="'+PL+'" y="'+(H-8)+'" font-size="16" fill="#888888">'+labels[0]+'</text>'
+    +(lastIdx>0?'<text x="'+(W-PR)+'" y="'+(H-8)+'" text-anchor="end" font-size="16" fill="#888888">'+labels[lastIdx]+'</text>':'')
     +'</svg>';
 }
 const CHART_REG={};
@@ -857,8 +857,8 @@ function buildMoodChart(filtered){
     +'<span><i style="background:#e85d40"></i>Bad</span></div>';
   if(!ws.length){
     return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend
-      +'<svg viewBox="0 0 500 170" style="width:100%;height:170px"><text x="250" y="85" text-anchor="middle" '
-      +'fill="#bbbbbb" font-size="15" font-family="Inter,sans-serif">No mood logged in this period</text></svg></div>';
+      +'<svg viewBox="0 0 500 180" style="width:100%;height:180px"><text x="250" y="90" text-anchor="middle" '
+      +'fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No mood logged in this period</text></svg></div>';
   }
   // Headline: share of good days across the range, and change vs previous week
   const tot=ws.reduce((a,w)=>a+w.n,0), good=ws.reduce((a,w)=>a+w.good,0);
@@ -867,11 +867,11 @@ function buildMoodChart(filtered){
   if(ws.length>1 && ws[ws.length-1].n>=4){
     const a=ws[ws.length-1], b=ws[ws.length-2];
     const d=Math.round(a.good/a.n*100)-Math.round(b.good/b.n*100);
-    if(d!==0) delta=`<span style="font-size:12px;font-weight:600;color:${d>0?'#4a9e6a':'#e85d40'};margin-left:4px;">${d>0?'▲':'▼'} ${Math.abs(d)}%</span>`;
+    if(d!==0) delta=`<span style="font-size:15px;font-weight:600;color:${d>0?'#4a9e6a':'#e85d40'};margin-left:4px;">${d>0?'▲':'▼'} ${Math.abs(d)}%</span>`;
   }
   const headline=`<div class="chart-hl"><span class="chart-hn">${pct}%</span><span class="chart-hu">good days</span>${delta}<span class="chart-ha">${tot} days logged</span></div>`;
 
-  const W=500,H=140,PL=16,PR=16,PT=8,PB=24,iW=W-PL-PR,iH=H-PT-PB;
+  const W=500,H=180,PL=16,PR=16,PT=8,PB=32,iW=W-PL-PR,iH=H-PT-PB;
   const toX=i=>PL+(i/Math.max(ws.length-1,1))*iW;
   // Boundaries: b1 = top of good band, b2 = top of normal band (0..1 from bottom)
   const b1=ws.map((w,i)=>[toX(i), PT+iH-(w.good/w.n)*iH]);
@@ -897,10 +897,10 @@ function buildMoodChart(filtered){
   }
   const last=b1[b1.length-1];
   const dot='<circle cx="'+last[0]+'" cy="'+last[1]+'" r="6" fill="#4a9e6a" stroke="white" stroke-width="2.5"/>';
-  const xl='<text x="'+PL+'" y="'+(H-6)+'" font-size="11" fill="#999999">'+ws[0].label+'</text>'
-    +(ws.length>1?'<text x="'+(W-PR)+'" y="'+(H-6)+'" text-anchor="end" font-size="11" fill="#999999">'+ws[ws.length-1].label+'</text>':'');
+  const xl='<text x="'+PL+'" y="'+(H-8)+'" font-size="16" fill="#888888">'+ws[0].label+'</text>'
+    +(ws.length>1?'<text x="'+(W-PR)+'" y="'+(H-6)+'" text-anchor="end" font-size="16" fill="#888888">'+ws[ws.length-1].label+'</text>':'');
   return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend+headline
-    +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px" font-family="Inter,sans-serif">'
+    +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" font-family="Inter,sans-serif">'
     +bands+dot+xl+'</svg></div>';
 }
 
@@ -927,7 +927,7 @@ function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxi
       const upBad=/weight|calorie/i.test(title);
       const good=upBad?!up:up;
       const dv=fmtV(Math.abs(latest-prev),fmt).replace(/[a-z]+$/,'');
-      delta=`<span style="font-size:12px;font-weight:600;color:${good?'#4a9e6a':'#e85d40'};margin-left:4px;">${up?'▲':'▼'} ${dv}</span>`;
+      delta=`<span style="font-size:15px;font-weight:600;color:${good?'#4a9e6a':'#e85d40'};margin-left:4px;">${up?'▲':'▼'} ${dv}</span>`;
     }
     headline=`<div class="chart-hl"><span class="chart-hn">${numPart}</span>${unitPart?`<span class="chart-hu">${unitPart}</span>`:''}${delta}<span class="chart-ha">avg ${fmtV(avg,fmt)}</span></div>`;
   }
