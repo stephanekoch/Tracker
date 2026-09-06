@@ -858,7 +858,7 @@ function chartTap(e){
   tip.style.left=left+'px';
   tip.style.top=Math.max(8,e.clientY-78)+'px';
   clearTimeout(tip._t);
-  tip._t=setTimeout(()=>tip.classList.add('hidden'),2600);
+  tip._t=setTimeout(()=>tip.classList.add('hidden'),2000);
 }
 
 const MOOD_COL={good:'#4a9e6a',normal:'#5b8def',bad:'#e85d40'};
@@ -1421,7 +1421,16 @@ function statusWindow(days){
   };
 }
 
-function statusState(){ return statusWindow(7); }
+function statusState(){
+  if(!goal || !goal.createdDate) return statusWindow(7);
+  // In the first 7 days, use a rolling window (1 day, then 2, then 3...)
+  // so we don't require a full week of data before showing a status
+  const today = todayStr();
+  const daysElapsed = Math.max(1,
+    Math.round((new Date(today) - new Date(goal.createdDate)) / 86400000) + 1
+  );
+  return statusWindow(Math.min(7, daysElapsed));
+}
 
 /* ── Goal storage ───────────────────────────────────────── */
 
