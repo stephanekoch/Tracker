@@ -73,7 +73,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .range-btn{flex:1;padding:9px 2px;border:none;border-radius:7px;background:transparent;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap;text-align:center;}
 .range-btn.active{background:var(--accent);color:white;font-weight:700;}
 .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;}
-.chart-ttl{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px;}
+.chart-ttl{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px;}
 .study-pills{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
 .pill{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;color:var(--muted);white-space:nowrap;}
 .pill.active{background:var(--accent);color:white;border-color:var(--accent);}
@@ -117,6 +117,13 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
   padding:0;display:inline-flex;align-items:center;justify-content:center;opacity:.75;}
 .pill-info:hover{opacity:1;}
 .chart-legend{display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+.chart-hl{display:flex;align-items:baseline;gap:6px;margin-bottom:2px;flex-wrap:wrap;}
+.chart-hn{font-size:28px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1;}
+.chart-hu{font-size:13px;color:var(--muted);}
+.chart-ha{font-size:12px;color:var(--muted);margin-left:auto;}
+.chart-legend span{font-size:12px;}
+.mood-legend span{font-size:12px;}
+.legend-swatch.dash{border-top-width:3px;}
 .chart-legend span{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);}
 .legend-swatch{display:inline-block;width:16px;height:0;border-top:3px solid;border-radius:2px;}
 .legend-swatch.dash{border-top-style:dashed;border-top-color:#2f8f5b;border-top-width:4px;}
@@ -706,111 +713,80 @@ function weeklyStudyCalc(filtered){
 }
 
 // SVG Chart
+function smoothPath(pts){
+  // Cubic curve through points with horizontal tangents — no overshoot on flat runs
+  if(!pts.length) return '';
+  if(pts.length===1) return 'M'+pts[0][0]+','+pts[0][1];
+  let d='M'+pts[0][0]+','+pts[0][1];
+  for(let i=1;i<pts.length;i++){
+    const [x0,y0]=pts[i-1],[x1,y1]=pts[i], cx=(x0+x1)/2;
+    d+=' C'+cx+','+y0+' '+cx+','+y1+' '+x1+','+y1;
+  }
+  return d;
+}
+
+function smoothPathRev(pts){ return smoothPath(pts.slice().reverse()); }
+
 function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts){
   opts = opts || {};
   const tgt = opts.targetData || null;
-  const W=500, H=310, PL=68, PR=20, PT=22, PB=40;
+  const W=500, H=170, PL=16, PR=16, PT=14, PB=26;
   const iW=W-PL-PR, iH=H-PT-PB;
   const nums=data.map(v=>{if(v===null||v===undefined||v==='') return null; const n=Number(v); return isNaN(n)?null:n;});
   const valid=nums.filter(v=>v!==null);
   const tgtValid = tgt ? tgt.filter(v=>v!==null&&v!==undefined&&!isNaN(v)) : [];
-  // Bail only if there is nothing at all to draw. A target curve is still worth
-  // showing when the selected range happens to contain no readings.
   if(!valid.length && !tgtValid.length)
-    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No data for this period</text></svg>';
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="15" font-family="Inter,sans-serif">No data for this period</text></svg>';
   const allVals = valid.concat(tgtValid);
   const dMin=Math.min(...allVals), dMax=Math.max(...allVals), aR=(dMax-dMin)||1;
-  const yMin=yAxisMin!==undefined?Math.min(yAxisMin,dMin-aR*.08):dMin-aR*.12;
-  const yMax=yAxisMax!==undefined?Math.max(yAxisMax,dMax+aR*.08):dMax+aR*.12;
+  const yMin=dMin-aR*.15, yMax=dMax+aR*.15;
   const yR=yMax-yMin||1;
   const toX=i=>PL+(i/Math.max(nums.length-1,1))*iW;
   const toY=v=>PT+iH-((Math.min(Math.max(v,yMin),yMax)-yMin)/yR)*iH;
-  // Avg
-  const avg=(avgFmt&&valid.length)?valid.reduce((a,b)=>a+b,0)/valid.length:null;
-  const avgY=avg!==null?toY(avg):null;
-  const avgLbl=avg!==null?'Avg: '+fmtV(avg,avgFmt):null;
+  const fmt=avgFmt||yAxisFmt||'#,##0';
   // Latest
   let li=-1; for(let i=nums.length-1;i>=0;i--){if(nums[i]!==null){li=i;break;}}
   const lv=li>=0?nums[li]:null, lx=li>=0?toX(li):null, ly=lv!==null?toY(lv):null;
-  const llbl=lv!==null?fmtV(lv,avgFmt||yAxisFmt||'#,##0'):null;
-  // Y ticks — only 4 lines for cleaner look
-  const ticks=[];
-  for(let i=0;i<=3;i++){const v=yMin+(yR*i/3); const y=PT+iH-(i/3)*iH; ticks.push({y,l:fmtV(v,yAxisFmt||avgFmt||'#,##0')});}
-  // X labels — max 5
-  const step=Math.ceil(labels.length/5);
+  // X labels — first and last only
   const lastIdx=labels.length-1;
-  // Always label the final point — otherwise the axis looks like it stops early
-  const xlbls=labels.map((l,i)=>({l,x:toX(i),
-    show:(i%step===0 && (lastIdx-i)>=step*0.55) || i===lastIdx}));
-  // Line path
-  let lp='',fp='';
+  // Line segments (gaps stay gaps)
   const pts=nums.map((v,i)=>v!==null?[toX(i),toY(v)]:null);
   const segs=[];let cur=[];
   pts.forEach(p=>{if(p)cur.push(p);else if(cur.length){segs.push(cur);cur=[];}});
   if(cur.length)segs.push(cur);
-  segs.forEach(seg=>{
-    if(seg.length===1){lp+='M'+seg[0][0]+','+seg[0][1]+' ';}
-    else{seg.forEach(([x,y],i)=>{lp+=i===0?'M'+x+','+y:'L'+x+','+y;});}
-    if(seg.length>1){fp+='M'+seg[0][0]+','+(PT+iH)+' ';seg.forEach(([x,y])=>{fp+='L'+x+','+y+' ';});fp+='L'+seg[seg.length-1][0]+','+(PT+iH)+' Z ';}
-  });
-  // Target curve path
-  let tp='', tgtEnd=null;
+  const lp=segs.map(smoothPath).join(' ');
+  // Target curve
+  let tp='';
   if(tgt){
-    const tpts=tgt.map((v,i)=>(v===null||v===undefined||isNaN(v))?null:[toX(i),toY(v)]);
-    let started=false;
-    tpts.forEach(p=>{ if(!p) return; tp += (started?'L':'M')+p[0]+','+p[1]; started=true; tgtEnd=p; });
+    const tpts=tgt.map((v,i)=>(v===null||v===undefined||isNaN(v))?null:[toX(i),toY(v)]).filter(Boolean);
+    tp=smoothPath(tpts);
   }
-  // Latest pill positioning
-  const pW=92,pH=27;
-  let px=lx!==null?lx-pW/2:0;
-  if(px<PL)px=PL; if(px+pW>W-PR)px=W-PR-pW;
-  const py=ly!==null?Math.max(PT+2,ly-30):0;
-  // Avg pill positioning — place at 60% along
-  const avgPillX=PL+iW*0.6;
   const cid='c'+(++chartSeq);
-  CHART_REG[cid]={labels:labels,data:nums,tgt:tgt||null,fmt:(avgFmt||yAxisFmt||'#,##0'),
-                  W:W,PL:PL,iW:iW,n:nums.length};
+  CHART_REG[cid]={labels:labels,data:nums,tgt:tgt||null,fmt:fmt,W:W,PL:PL,iW:iW,n:nums.length};
   return '<svg data-cid="'+cid+'" onclick="chartTap(event)" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px;cursor:pointer;" font-family="Inter,sans-serif">'
-    // Grid lines — subtle, only 4
-    +ticks.map(t=>'<line x1="'+PL+'" y1="'+t.y+'" x2="'+(W-PR)+'" y2="'+t.y+'" stroke="#f0e6d8" stroke-width="1"/>').join('')
-    // Y labels — larger and bolder
-    +ticks.map(t=>'<text x="'+(PL-7)+'" y="'+(t.y+5)+'" text-anchor="end" font-size="16" fill="#999999" font-weight="700">'+t.l+'</text>').join('')
-    // X labels — larger
-    +xlbls.filter(l=>l.show).map(l=>'<text x="'+l.x+'" y="'+(H-8)+'" text-anchor="middle" font-size="15" fill="#999999">'+l.l+'</text>').join('')
-    // Fill area
-
-    // The goal window is tinted, so actual and target can be compared inside it
+    // Goal window tint — soft
     +(function(){
       const mi=opts.markIndex;
       if(mi===undefined||mi===null||mi<0||mi>=nums.length) return '';
       const mx=toX(mi), lbl=opts.markLabel||'';
-      // Flip the label to the left of the line when it would run off the edge
       const flip = mx > PL+iW*0.52;
-      return '<rect x="'+mx+'" y="'+PT+'" width="'+(W-PR-mx)+'" height="'+iH
-        +'" fill="#4a9e6a" fill-opacity="0.08"/>'
-        +'<line x1="'+mx+'" y1="'+PT+'" x2="'+mx+'" y2="'+(PT+iH)
-        +'" stroke="#bdbdbd" stroke-width="1.5" stroke-dasharray="3,4"/>'
-        +(lbl?'<text x="'+(flip?mx-7:mx+7)+'" y="'+(PT+13)+'" text-anchor="'+(flip?'end':'start')
-          +'" font-size="14" fill="#8a8a8a" font-weight="600">'+lbl+'</text>':'');
+      return '<rect x="'+mx+'" y="'+PT+'" width="'+(W-PR-mx)+'" height="'+iH+'" rx="4" fill="#4a9e6a" fill-opacity="0.06"/>'
+        +(lbl?'<text x="'+(flip?mx-6:mx+6)+'" y="'+(PT+11)+'" text-anchor="'+(flip?'end':'start')+'" font-size="10" fill="#8a8a8a" font-weight="600">'+lbl+'</text>':'');
     })()
-    // Target curve — dashed, behind the real line
-    +(tp?'<path d="'+tp+'" fill="none" stroke="#2f8f5b" stroke-width="4" stroke-dasharray="9,6" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>':'')
-    // Goal endpoint
-    +(tgtEnd?'<circle cx="'+tgtEnd[0]+'" cy="'+tgtEnd[1]+'" r="7" fill="#2f8f5b" stroke="white" stroke-width="2.5"/>':'')
-    // Line — thicker
-    +(lp?'<path d="'+lp+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>':'')
-    // Avg line + pill
-    +(avgY!==null?
-      '<line x1="'+PL+'" y1="'+avgY+'" x2="'+(W-PR)+'" y2="'+avgY+'" stroke="#f0856e" stroke-width="1.5" stroke-dasharray="7,5"/>'
-      +'<rect x="'+(avgPillX-46)+'" y="'+(avgY-13)+'" width="92" height="26" rx="6" fill="rgba(253,248,242,.97)" stroke="#f0856e" stroke-width="1.2"/>'
-      +'<text x="'+avgPillX+'" y="'+(avgY+6)+'" text-anchor="middle" font-size="15" fill="#e85d40" font-weight="700">'+avgLbl+'</text>'
-    :'')
-    // Latest dot + pill
-    +(lv!==null?
-      '<circle cx="'+lx+'" cy="'+ly+'" r="6" fill="'+color+'" stroke="white" stroke-width="2.5"/>'
-      +'<rect x="'+px+'" y="'+py+'" width="'+pW+'" height="'+pH+'" rx="6" fill="'+color+'" opacity=".93"/>'
-      +'<text x="'+(px+pW/2)+'" y="'+(py+18)+'" text-anchor="middle" font-size="15" fill="white" font-weight="700">'+llbl+'</text>'
-    :'')
+    // Baseline
+    +'<line x1="'+PL+'" y1="'+(PT+iH)+'" x2="'+(W-PR)+'" y2="'+(PT+iH)+'" stroke="#eeeeee" stroke-width="1"/>'
+    // Min / max corner markers
+    +'<text x="'+PL+'" y="'+(PT+9)+'" font-size="10" fill="#cccccc">'+fmtV(yMax,yAxisFmt||fmt)+'</text>'
+    +'<text x="'+PL+'" y="'+(PT+iH-4)+'" font-size="10" fill="#cccccc">'+fmtV(yMin,yAxisFmt||fmt)+'</text>'
+    // Target curve
+    +(tp?'<path d="'+tp+'" fill="none" stroke="#2f8f5b" stroke-width="2" stroke-dasharray="6,5" stroke-linecap="round"/>':'')
+    // Actual line
+    +(lp?'<path d="'+lp+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round"/>':'')
+    // Latest dot
+    +(lv!==null?'<circle cx="'+lx+'" cy="'+ly+'" r="6" fill="'+color+'" stroke="white" stroke-width="2.5"/>':'')
+    // X labels
+    +'<text x="'+PL+'" y="'+(H-8)+'" font-size="11" fill="#999999">'+labels[0]+'</text>'
+    +(lastIdx>0?'<text x="'+(W-PR)+'" y="'+(H-8)+'" text-anchor="end" font-size="11" fill="#999999">'+labels[lastIdx]+'</text>':'')
     +'</svg>';
 }
 const CHART_REG={};
@@ -871,55 +847,61 @@ function buildMoodChart(filtered){
     const m=(e.mood||'').toLowerCase();
     if(!MOOD_COL[m]) return;
     const k=getWeekKey(e.date);
-    if(!weeks[k]) weeks[k]={label:fmtDate(e.date),good:0,normal:0,bad:0,n:0};
+    if(!weeks[k]) weeks[k]={key:k,label:fmtDate(e.date),good:0,normal:0,bad:0,n:0};
     weeks[k][m]++; weeks[k].n++;
   });
-  const ws=Object.values(weeks);
+  const ws=Object.values(weeks).sort((a,b)=>a.key.localeCompare(b.key));
   const legend='<div class="mood-legend">'
     +'<span><i style="background:#4a9e6a"></i>Good</span>'
     +'<span><i style="background:#5b8def"></i>Normal</span>'
     +'<span><i style="background:#e85d40"></i>Bad</span></div>';
   if(!ws.length){
     return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend
-      +'<svg viewBox="0 0 500 310" style="width:100%;height:310px"><text x="250" y="155" text-anchor="middle" '
-      +'fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No mood logged in this period</text></svg></div>';
+      +'<svg viewBox="0 0 500 170" style="width:100%;height:170px"><text x="250" y="85" text-anchor="middle" '
+      +'fill="#bbbbbb" font-size="15" font-family="Inter,sans-serif">No mood logged in this period</text></svg></div>';
   }
-  const W=500,H=310,PL=68,PR=20,PT=22,PB=40,iW=W-PL-PR,iH=H-PT-PB;
-  const slot=iW/ws.length, bw=Math.min(46,slot*0.62);
-  let bars='';
-  ws.forEach((w,i)=>{
-    const x=PL+slot*i+(slot-bw)/2;
-    let y=PT;
-    const faded=w.n<4;
-    ['good','normal','bad'].forEach(m=>{
-      if(!w[m]) return;
-      const h=(w[m]/w.n)*iH;
-      bars+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+MOOD_COL[m]+'"'
-         +(faded?' fill-opacity="0.42"':'')+'/>';
-      y+=h;
-    });
-    bars+='<text x="'+(x+bw/2)+'" y="'+(PT-7)+'" text-anchor="middle" font-size="12" fill="'
-       +(faded?'#c8c8c8':'#999999')+'">'+w.n+'d</text>';
-  });
-  const step=Math.ceil(ws.length/5);
-  let xl='';
-  ws.forEach((w,i)=>{
-    if(i%step!==0 && i!==ws.length-1) return;
-    xl+='<text x="'+(PL+slot*i+slot/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="15" fill="#999999">'+w.label+'</text>';
-  });
-  let grid='';
-  [0,.25,.5,.75,1].forEach(f=>{
-    const y=PT+iH*f;
-    grid+='<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="#f0f0f0" stroke-width="1"/>'
-       +'<text x="'+(PL-7)+'" y="'+(y+5)+'" text-anchor="end" font-size="16" fill="#999999" font-weight="700">'
-       +Math.round((1-f)*100)+'%</text>';
-  });
-  const anyFaded=ws.some(w=>w.n<4);
-  const note=anyFaded?'<div style="font-size:12px;color:var(--muted);margin-top:8px;">'
-    +'Faded bars are weeks with fewer than 4 days logged.</div>':'';
-  return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend
+  // Headline: share of good days across the range, and change vs previous week
+  const tot=ws.reduce((a,w)=>a+w.n,0), good=ws.reduce((a,w)=>a+w.good,0);
+  const pct=Math.round(good/tot*100);
+  let delta='';
+  if(ws.length>1 && ws[ws.length-1].n>=4){
+    const a=ws[ws.length-1], b=ws[ws.length-2];
+    const d=Math.round(a.good/a.n*100)-Math.round(b.good/b.n*100);
+    if(d!==0) delta=`<span style="font-size:12px;font-weight:600;color:${d>0?'#4a9e6a':'#e85d40'};margin-left:4px;">${d>0?'▲':'▼'} ${Math.abs(d)}%</span>`;
+  }
+  const headline=`<div class="chart-hl"><span class="chart-hn">${pct}%</span><span class="chart-hu">good days</span>${delta}<span class="chart-ha">${tot} days logged</span></div>`;
+
+  const W=500,H=140,PL=16,PR=16,PT=8,PB=24,iW=W-PL-PR,iH=H-PT-PB;
+  const toX=i=>PL+(i/Math.max(ws.length-1,1))*iW;
+  // Boundaries: b1 = top of good band, b2 = top of normal band (0..1 from bottom)
+  const b1=ws.map((w,i)=>[toX(i), PT+iH-(w.good/w.n)*iH]);
+  const b2=ws.map((w,i)=>[toX(i), PT+iH-((w.good+w.normal)/w.n)*iH]);
+  const p1=smoothPath(b1), p2=smoothPath(b2);
+  const top=PT, bot=PT+iH, x0=PL, x1=W-PR;
+  const single=ws.length===1;
+  let bands;
+  if(single){
+    bands='<rect x="'+x0+'" y="'+top+'" width="'+iW+'" height="'+(b2[0][1]-top)+'" fill="#e85d40" fill-opacity=".35"/>'
+      +'<rect x="'+x0+'" y="'+b2[0][1]+'" width="'+iW+'" height="'+(b1[0][1]-b2[0][1])+'" fill="#5b8def" fill-opacity=".35"/>'
+      +'<rect x="'+x0+'" y="'+b1[0][1]+'" width="'+iW+'" height="'+(bot-b1[0][1])+'" fill="#4a9e6a" fill-opacity=".35"/>';
+  } else {
+    // Each band is its own closed region so the translucent fills never overlap
+    const bad='M'+x0+','+top+' L'+x1+','+top+' L'+x1+','+b2[b2.length-1][1]+' '+smoothPathRev(b2).replace(/^M[^ ]+/,'')+' Z';
+    const normal=p2+' L'+x1+','+b1[b1.length-1][1]+' '+smoothPathRev(b1).replace(/^M[^ ]+/,'')+' Z';
+    const good=p1+' L'+x1+','+bot+' L'+x0+','+bot+' Z';
+    bands='<path d="'+bad+'" fill="#e85d40" fill-opacity=".35"/>'
+      +'<path d="'+normal+'" fill="#5b8def" fill-opacity=".35"/>'
+      +'<path d="'+good+'" fill="#4a9e6a" fill-opacity=".35"/>'
+      +'<path d="'+p2+'" fill="none" stroke="#ffffff" stroke-width="2"/>'
+      +'<path d="'+p1+'" fill="none" stroke="#4a9e6a" stroke-width="3" stroke-linecap="round"/>';
+  }
+  const last=b1[b1.length-1];
+  const dot='<circle cx="'+last[0]+'" cy="'+last[1]+'" r="6" fill="#4a9e6a" stroke="white" stroke-width="2.5"/>';
+  const xl='<text x="'+PL+'" y="'+(H-6)+'" font-size="11" fill="#999999">'+ws[0].label+'</text>'
+    +(ws.length>1?'<text x="'+(W-PR)+'" y="'+(H-6)+'" text-anchor="end" font-size="11" fill="#999999">'+ws[ws.length-1].label+'</text>':'');
+  return '<div class="chart-card"><div class="chart-ttl">Mood</div>'+legend+headline
     +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px" font-family="Inter,sans-serif">'
-    +grid+bars+xl+'</svg>'+note+'</div>';
+    +bands+dot+xl+'</svg></div>';
 }
 
 function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, pills, opts){
@@ -928,9 +910,31 @@ function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxi
     ? `<div class="chart-head"><div class="chart-ttl" style="margin-bottom:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${title}${opts.titleExtra||''}</div>${opts.action||''}</div>`
     : `<div class="chart-ttl">${title}</div>`;
   const legend = opts.legend ? `<div class="chart-legend">${opts.legend}</div>` : '';
+  // Headline: latest value, change vs previous reading, range average
+  const fmt=avgFmt||yAxisFmt||'#,##0';
+  const nums=data.map(v=>(v===null||v===undefined||v==='')?null:(isNaN(Number(v))?null:Number(v)));
+  const valid=nums.filter(v=>v!==null);
+  let headline='';
+  if(valid.length){
+    const latest=valid[valid.length-1];
+    const prev=valid.length>1?valid[valid.length-2]:null;
+    const avg=valid.reduce((a,b)=>a+b,0)/valid.length;
+    const m=String(fmtV(latest,fmt)).match(/^([\d.,'"]+)(.*)$/);
+    const numPart=m?m[1]:fmtV(latest,fmt), unitPart=m?m[2].trim():'';
+    let delta='';
+    if(prev!==null && Math.abs(latest-prev)>1e-9){
+      const up=latest>prev;
+      const upBad=/weight|calorie/i.test(title);
+      const good=upBad?!up:up;
+      const dv=fmtV(Math.abs(latest-prev),fmt).replace(/[a-z]+$/,'');
+      delta=`<span style="font-size:12px;font-weight:600;color:${good?'#4a9e6a':'#e85d40'};margin-left:4px;">${up?'▲':'▼'} ${dv}</span>`;
+    }
+    headline=`<div class="chart-hl"><span class="chart-hn">${numPart}</span>${unitPart?`<span class="chart-hu">${unitPart}</span>`:''}${delta}<span class="chart-ha">avg ${fmtV(avg,fmt)}</span></div>`;
+  }
   return `<div class="chart-card">
     ${head}
     ${legend}
+    ${headline}
     ${pills||''}
     ${makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts)}
   </div>`;
