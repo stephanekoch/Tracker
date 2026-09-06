@@ -73,7 +73,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .range-btn{flex:1;padding:9px 2px;border:none;border-radius:7px;background:transparent;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap;text-align:center;}
 .range-btn.active{background:var(--accent);color:white;font-weight:700;}
 .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;}
-.chart-ttl{font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px;}
+.chart-ttl{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px;}
 .study-pills{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
 .pill{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;color:var(--muted);white-space:nowrap;}
 .pill.active{background:var(--accent);color:white;border-color:var(--accent);}
@@ -117,13 +117,10 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
   padding:0;display:inline-flex;align-items:center;justify-content:center;opacity:.75;}
 .pill-info:hover{opacity:1;}
 .chart-legend{display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
-.chart-hl{display:flex;align-items:baseline;gap:6px;margin-bottom:2px;flex-wrap:wrap;}
-.chart-hn{font-size:34px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1;}
-.chart-hu{font-size:16px;color:var(--muted);}
-.chart-ha{font-size:15px;color:var(--muted);margin-left:auto;}
-.chart-legend span{font-size:15px;}
-.mood-legend span{font-size:15px;}
-.legend-swatch.dash{border-top-width:3px;}
+.chart-hl{display:flex;align-items:baseline;gap:6px;margin-bottom:4px;flex-wrap:wrap;}
+.chart-hn{font-size:30px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1;}
+.chart-hu{font-size:15px;color:var(--muted);}
+.chart-ha{font-size:14px;color:var(--muted);margin-left:auto;}
 .chart-legend span{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);}
 .legend-swatch{display:inline-block;width:16px;height:0;border-top:3px solid;border-radius:2px;}
 .legend-swatch.dash{border-top-style:dashed;border-top-color:#2f8f5b;border-top-width:4px;}
@@ -713,6 +710,165 @@ function weeklyStudyCalc(filtered){
 }
 
 // SVG Chart
+function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts){
+  opts = opts || {};
+  const tgt = opts.targetData || null;
+  const W=500, H=310, PL=68, PR=20, PT=22, PB=40;
+  const iW=W-PL-PR, iH=H-PT-PB;
+  const nums=data.map(v=>{if(v===null||v===undefined||v==='') return null; const n=Number(v); return isNaN(n)?null:n;});
+  const valid=nums.filter(v=>v!==null);
+  const tgtValid = tgt ? tgt.filter(v=>v!==null&&v!==undefined&&!isNaN(v)) : [];
+  // Bail only if there is nothing at all to draw. A target curve is still worth
+  // showing when the selected range happens to contain no readings.
+  if(!valid.length && !tgtValid.length)
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No data for this period</text></svg>';
+  const allVals = valid.concat(tgtValid);
+  const dMin=Math.min(...allVals), dMax=Math.max(...allVals), aR=(dMax-dMin)||1;
+  const yMin=yAxisMin!==undefined?Math.min(yAxisMin,dMin-aR*.08):dMin-aR*.12;
+  const yMax=yAxisMax!==undefined?Math.max(yAxisMax,dMax+aR*.08):dMax+aR*.12;
+  const yR=yMax-yMin||1;
+  const toX=i=>PL+(i/Math.max(nums.length-1,1))*iW;
+  const toY=v=>PT+iH-((Math.min(Math.max(v,yMin),yMax)-yMin)/yR)*iH;
+  // Avg
+  const avg=(avgFmt&&valid.length)?valid.reduce((a,b)=>a+b,0)/valid.length:null;
+  const avgY=avg!==null?toY(avg):null;
+  const avgLbl=avg!==null?'Avg: '+fmtV(avg,avgFmt):null;
+  // Latest
+  let li=-1; for(let i=nums.length-1;i>=0;i--){if(nums[i]!==null){li=i;break;}}
+  const lv=li>=0?nums[li]:null, lx=li>=0?toX(li):null, ly=lv!==null?toY(lv):null;
+  const llbl=lv!==null?fmtV(lv,avgFmt||yAxisFmt||'#,##0'):null;
+  // Y ticks — only 4 lines for cleaner look
+  const ticks=[];
+  for(let i=0;i<=3;i++){const v=yMin+(yR*i/3); const y=PT+iH-(i/3)*iH; ticks.push({y,l:fmtV(v,yAxisFmt||avgFmt||'#,##0')});}
+  // X labels — max 5
+  const step=Math.ceil(labels.length/5);
+  const lastIdx=labels.length-1;
+  // Always label the final point — otherwise the axis looks like it stops early
+  const xlbls=labels.map((l,i)=>({l,x:toX(i),
+    show:(i%step===0 && (lastIdx-i)>=step*0.55) || i===lastIdx}));
+  // Line path
+  let lp='',fp='';
+  const pts=nums.map((v,i)=>v!==null?[toX(i),toY(v)]:null);
+  const segs=[];let cur=[];
+  pts.forEach(p=>{if(p)cur.push(p);else if(cur.length){segs.push(cur);cur=[];}});
+  if(cur.length)segs.push(cur);
+  segs.forEach(seg=>{
+    if(seg.length===1){lp+='M'+seg[0][0]+','+seg[0][1]+' ';}
+    else{seg.forEach(([x,y],i)=>{lp+=i===0?'M'+x+','+y:'L'+x+','+y;});}
+    if(seg.length>1){fp+='M'+seg[0][0]+','+(PT+iH)+' ';seg.forEach(([x,y])=>{fp+='L'+x+','+y+' ';});fp+='L'+seg[seg.length-1][0]+','+(PT+iH)+' Z ';}
+  });
+  // Target curve path
+  let tp='', tgtEnd=null;
+  if(tgt){
+    const tpts=tgt.map((v,i)=>(v===null||v===undefined||isNaN(v))?null:[toX(i),toY(v)]);
+    let started=false;
+    tpts.forEach(p=>{ if(!p) return; tp += (started?'L':'M')+p[0]+','+p[1]; started=true; tgtEnd=p; });
+  }
+  // Latest pill positioning
+  const pW=92,pH=27;
+  let px=lx!==null?lx-pW/2:0;
+  if(px<PL)px=PL; if(px+pW>W-PR)px=W-PR-pW;
+  const py=ly!==null?Math.max(PT+2,ly-30):0;
+  // Avg pill positioning — place at 60% along
+  const avgPillX=PL+iW*0.6;
+  const cid='c'+(++chartSeq);
+  CHART_REG[cid]={labels:labels,data:nums,tgt:tgt||null,fmt:(avgFmt||yAxisFmt||'#,##0'),
+                  W:W,PL:PL,iW:iW,n:nums.length};
+  return '<svg data-cid="'+cid+'" onclick="chartTap(event)" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px;cursor:pointer;" font-family="Inter,sans-serif">'
+    // Grid lines — subtle, only 4
+    +ticks.map(t=>'<line x1="'+PL+'" y1="'+t.y+'" x2="'+(W-PR)+'" y2="'+t.y+'" stroke="#f0e6d8" stroke-width="1"/>').join('')
+    // Y labels — larger and bolder
+    +ticks.map(t=>'<text x="'+(PL-7)+'" y="'+(t.y+5)+'" text-anchor="end" font-size="16" fill="#999999" font-weight="700">'+t.l+'</text>').join('')
+    // X labels — larger
+    +xlbls.filter(l=>l.show).map(l=>'<text x="'+l.x+'" y="'+(H-8)+'" text-anchor="middle" font-size="15" fill="#999999">'+l.l+'</text>').join('')
+    // Fill area
+
+    // The goal window is tinted, so actual and target can be compared inside it
+    +(function(){
+      const mi=opts.markIndex;
+      if(mi===undefined||mi===null||mi<0||mi>=nums.length) return '';
+      const mx=toX(mi), lbl=opts.markLabel||'';
+      // Flip the label to the left of the line when it would run off the edge
+      const flip = mx > PL+iW*0.52;
+      return '<rect x="'+mx+'" y="'+PT+'" width="'+(W-PR-mx)+'" height="'+iH
+        +'" fill="#4a9e6a" fill-opacity="0.08"/>'
+        +'<line x1="'+mx+'" y1="'+PT+'" x2="'+mx+'" y2="'+(PT+iH)
+        +'" stroke="#bdbdbd" stroke-width="1.5" stroke-dasharray="3,4"/>'
+        +(lbl?'<text x="'+(flip?mx-7:mx+7)+'" y="'+(PT+13)+'" text-anchor="'+(flip?'end':'start')
+          +'" font-size="14" fill="#8a8a8a" font-weight="600">'+lbl+'</text>':'');
+    })()
+    // Target curve — dashed, behind the real line
+    +(tp?'<path d="'+tp+'" fill="none" stroke="#2f8f5b" stroke-width="4" stroke-dasharray="9,6" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>':'')
+    // Goal endpoint
+    +(tgtEnd?'<circle cx="'+tgtEnd[0]+'" cy="'+tgtEnd[1]+'" r="7" fill="#2f8f5b" stroke="white" stroke-width="2.5"/>':'')
+    // Line — thicker
+    +(lp?'<path d="'+lp+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>':'')
+    // Avg line + pill
+    +(avgY!==null?
+      '<line x1="'+PL+'" y1="'+avgY+'" x2="'+(W-PR)+'" y2="'+avgY+'" stroke="#f0856e" stroke-width="1.5" stroke-dasharray="7,5"/>'
+      +'<rect x="'+(avgPillX-46)+'" y="'+(avgY-13)+'" width="92" height="26" rx="6" fill="rgba(253,248,242,.97)" stroke="#f0856e" stroke-width="1.2"/>'
+      +'<text x="'+avgPillX+'" y="'+(avgY+6)+'" text-anchor="middle" font-size="15" fill="#e85d40" font-weight="700">'+avgLbl+'</text>'
+    :'')
+    // Latest dot + pill
+    +(lv!==null?
+      '<circle cx="'+lx+'" cy="'+ly+'" r="6" fill="'+color+'" stroke="white" stroke-width="2.5"/>'
+      +'<rect x="'+px+'" y="'+py+'" width="'+pW+'" height="'+pH+'" rx="6" fill="'+color+'" opacity=".93"/>'
+      +'<text x="'+(px+pW/2)+'" y="'+(py+18)+'" text-anchor="middle" font-size="15" fill="white" font-weight="700">'+llbl+'</text>'
+    :'')
+    +'</svg>';
+}
+const CHART_REG={};
+let chartSeq=0;
+
+// Map a tap's x-position back to the nearest plotted point and report its value.
+function chartTap(e){
+  const svg=e.currentTarget;
+  const reg=CHART_REG[svg.getAttribute('data-cid')];
+  if(!reg||!reg.n) return;
+  const r=svg.getBoundingClientRect();
+  const vbx=(e.clientX-r.left)/r.width*reg.W;
+  let i=Math.round((vbx-reg.PL)/reg.iW*(reg.n-1));
+  i=Math.max(0,Math.min(reg.n-1,i));
+
+  // Snap to the closest point that actually has a value
+  const has=k=>k>=0&&k<reg.n&&((reg.data[k]!==null&&!isNaN(reg.data[k]))
+    ||(reg.tgt&&reg.tgt[k]!==null&&reg.tgt[k]!==undefined&&!isNaN(reg.tgt[k])));
+  let hit=null;
+  for(let k=0;k<reg.n;k++){
+    if(has(i-k)){hit=i-k;break;}
+    if(has(i+k)){hit=i+k;break;}
+  }
+  if(hit===null) return;
+
+  const parts=[];
+  const av=reg.data[hit], tv=reg.tgt?reg.tgt[hit]:null;
+  if(av!==null&&av!==undefined&&!isNaN(av))
+    parts.push('<b style="color:#e85d40">'+fmtV(av,reg.fmt)+'</b>');
+  if(tv!==null&&tv!==undefined&&!isNaN(tv))
+    parts.push('<b style="color:#2f8f5b">'+fmtV(tv,reg.fmt)+'</b><i style="font-style:normal;opacity:.65"> target</i>');
+  if(!parts.length) return;
+
+  let tip=document.getElementById('chart-tip');
+  if(!tip){
+    tip=document.createElement('div'); tip.id='chart-tip';
+    document.body.appendChild(tip);
+    tip.onclick=()=>tip.classList.add('hidden');
+  }
+  tip.innerHTML='<span style="opacity:.55;font-size:12px">'+reg.labels[hit]+'</span><br>'+parts.join('<br>');
+  tip.classList.remove('hidden');
+  const tw=140;
+  let left=e.clientX-tw/2;
+  left=Math.max(8,Math.min(window.innerWidth-tw-8,left));
+  tip.style.left=left+'px';
+  tip.style.top=Math.max(8,e.clientY-78)+'px';
+  clearTimeout(tip._t);
+  tip._t=setTimeout(()=>tip.classList.add('hidden'),2000);
+}
+
+const MOOD_COL={good:'#4a9e6a',normal:'#5b8def',bad:'#e85d40'};
+
+// 100% stacked weekly mood. Weeks with few entries are dimmed and labelled,
+// because a single green day and a full green week otherwise look identical.
 function smoothPath(pts){
   // Cubic curve through points with horizontal tangents — no overshoot on flat runs
   if(!pts.length) return '';
@@ -789,58 +945,7 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
     +(lastIdx>0?'<text x="'+(W-PR)+'" y="'+(H-8)+'" text-anchor="end" font-size="16" fill="#888888">'+labels[lastIdx]+'</text>':'')
     +'</svg>';
 }
-const CHART_REG={};
-let chartSeq=0;
 
-// Map a tap's x-position back to the nearest plotted point and report its value.
-function chartTap(e){
-  const svg=e.currentTarget;
-  const reg=CHART_REG[svg.getAttribute('data-cid')];
-  if(!reg||!reg.n) return;
-  const r=svg.getBoundingClientRect();
-  const vbx=(e.clientX-r.left)/r.width*reg.W;
-  let i=Math.round((vbx-reg.PL)/reg.iW*(reg.n-1));
-  i=Math.max(0,Math.min(reg.n-1,i));
-
-  // Snap to the closest point that actually has a value
-  const has=k=>k>=0&&k<reg.n&&((reg.data[k]!==null&&!isNaN(reg.data[k]))
-    ||(reg.tgt&&reg.tgt[k]!==null&&reg.tgt[k]!==undefined&&!isNaN(reg.tgt[k])));
-  let hit=null;
-  for(let k=0;k<reg.n;k++){
-    if(has(i-k)){hit=i-k;break;}
-    if(has(i+k)){hit=i+k;break;}
-  }
-  if(hit===null) return;
-
-  const parts=[];
-  const av=reg.data[hit], tv=reg.tgt?reg.tgt[hit]:null;
-  if(av!==null&&av!==undefined&&!isNaN(av))
-    parts.push('<b style="color:#e85d40">'+fmtV(av,reg.fmt)+'</b>');
-  if(tv!==null&&tv!==undefined&&!isNaN(tv))
-    parts.push('<b style="color:#2f8f5b">'+fmtV(tv,reg.fmt)+'</b><i style="font-style:normal;opacity:.65"> target</i>');
-  if(!parts.length) return;
-
-  let tip=document.getElementById('chart-tip');
-  if(!tip){
-    tip=document.createElement('div'); tip.id='chart-tip';
-    document.body.appendChild(tip);
-    tip.onclick=()=>tip.classList.add('hidden');
-  }
-  tip.innerHTML='<span style="opacity:.55;font-size:12px">'+reg.labels[hit]+'</span><br>'+parts.join('<br>');
-  tip.classList.remove('hidden');
-  const tw=140;
-  let left=e.clientX-tw/2;
-  left=Math.max(8,Math.min(window.innerWidth-tw-8,left));
-  tip.style.left=left+'px';
-  tip.style.top=Math.max(8,e.clientY-78)+'px';
-  clearTimeout(tip._t);
-  tip._t=setTimeout(()=>tip.classList.add('hidden'),2000);
-}
-
-const MOOD_COL={good:'#4a9e6a',normal:'#5b8def',bad:'#e85d40'};
-
-// 100% stacked weekly mood. Weeks with few entries are dimmed and labelled,
-// because a single green day and a full green week otherwise look identical.
 function buildMoodChart(filtered){
   const weeks={};
   filtered.forEach(e=>{
@@ -910,31 +1015,9 @@ function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxi
     ? `<div class="chart-head"><div class="chart-ttl" style="margin-bottom:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${title}${opts.titleExtra||''}</div>${opts.action||''}</div>`
     : `<div class="chart-ttl">${title}</div>`;
   const legend = opts.legend ? `<div class="chart-legend">${opts.legend}</div>` : '';
-  // Headline: latest value, change vs previous reading, range average
-  const fmt=avgFmt||yAxisFmt||'#,##0';
-  const nums=data.map(v=>(v===null||v===undefined||v==='')?null:(isNaN(Number(v))?null:Number(v)));
-  const valid=nums.filter(v=>v!==null);
-  let headline='';
-  if(valid.length){
-    const latest=valid[valid.length-1];
-    const prev=valid.length>1?valid[valid.length-2]:null;
-    const avg=valid.reduce((a,b)=>a+b,0)/valid.length;
-    const m=String(fmtV(latest,fmt)).match(/^([\d.,'"]+)(.*)$/);
-    const numPart=m?m[1]:fmtV(latest,fmt), unitPart=m?m[2].trim():'';
-    let delta='';
-    if(prev!==null && Math.abs(latest-prev)>1e-9){
-      const up=latest>prev;
-      const upBad=/weight|calorie/i.test(title);
-      const good=upBad?!up:up;
-      const dv=fmtV(Math.abs(latest-prev),fmt).replace(/[a-z]+$/,'');
-      delta=`<span style="font-size:15px;font-weight:600;color:${good?'#4a9e6a':'#e85d40'};margin-left:4px;">${up?'▲':'▼'} ${dv}</span>`;
-    }
-    headline=`<div class="chart-hl"><span class="chart-hn">${numPart}</span>${unitPart?`<span class="chart-hu">${unitPart}</span>`:''}${delta}<span class="chart-ha">avg ${fmtV(avg,fmt)}</span></div>`;
-  }
   return `<div class="chart-card">
     ${head}
     ${legend}
-    ${headline}
     ${pills||''}
     ${makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts)}
   </div>`;
@@ -1427,12 +1510,9 @@ function statusWindow(days){
 
 function statusState(){
   if(!goal || !goal.createdDate) return statusWindow(7);
-  // In the first 7 days, use a rolling window (1 day, then 2, then 3...)
-  // so we don't require a full week of data before showing a status
+  // In the first 7 days use a rolling window (1 day, then 2, then 3...)
   const today = todayStr();
-  const daysElapsed = Math.max(1,
-    Math.round((new Date(today) - new Date(goal.createdDate)) / 86400000) + 1
-  );
+  const daysElapsed = Math.max(1, Math.round((new Date(today) - new Date(goal.createdDate)) / 86400000) + 1);
   return statusWindow(Math.min(7, daysElapsed));
 }
 
