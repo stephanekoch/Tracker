@@ -720,9 +720,16 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
     return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No data for this period</text></svg>';
   const allVals = valid.concat(tgtValid);
   const dMin=Math.min(...allVals), dMax=Math.max(...allVals), aR=(dMax-dMin)||1;
-  const yMin=yAxisMin!==undefined?Math.min(yAxisMin,dMin-aR*.08):dMin-aR*.12;
-  const yMax=yAxisMax!==undefined?Math.max(yAxisMax,dMax+aR*.08):dMax+aR*.12;
+  // Snap the axis to round numbers: pick a "nice" step (1, 2, 5 × 10^k) that
+  // gives 3–5 gridlines, then floor/ceil the data range to it.
+  const rawMin=yAxisMin!==undefined?Math.min(yAxisMin,dMin):dMin;
+  const rawMax=yAxisMax!==undefined?Math.max(yAxisMax,dMax):dMax;
+  const span=(rawMax-rawMin)||1;
+  const pow=Math.pow(10,Math.floor(Math.log10(span/4)));
+  const ystep=[1,2,5,10].map(m=>m*pow).find(s=>span/s<=6)||pow*10;
+  const yMin=Math.floor(rawMin/ystep)*ystep, yMax=Math.ceil(rawMax/ystep)*ystep;
   const yR=yMax-yMin||1;
+  const nTicks=Math.round(yR/ystep);
   const toX=i=>PL+(i/Math.max(nums.length-1,1))*iW;
   const toY=v=>PT+iH-((Math.min(Math.max(v,yMin),yMax)-yMin)/yR)*iH;
   // Avg
@@ -735,7 +742,7 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
   const llbl=lv!==null?fmtV(lv,avgFmt||yAxisFmt||'#,##0'):null;
   // Y ticks — only 4 lines for cleaner look
   const ticks=[];
-  for(let i=0;i<=3;i++){const v=yMin+(yR*i/3); const y=PT+iH-(i/3)*iH; ticks.push({y,l:fmtV(v,yAxisFmt||avgFmt||'#,##0')});}
+  for(let i=0;i<=nTicks;i++){const v=yMin+ystep*i; const y=toY(v); ticks.push({y,l:fmtV(v,yAxisFmt||avgFmt||'#,##0')});}
   // X labels — max 5
   const step=Math.ceil(labels.length/5);
   const lastIdx=labels.length-1;
@@ -772,7 +779,7 @@ function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts
                   W:W,PL:PL,iW:iW,n:nums.length};
   return '<svg data-cid="'+cid+'" onclick="chartTap(event)" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px;cursor:pointer;" font-family="Inter,sans-serif">'
     // Grid lines — subtle, only 4
-    +ticks.map(t=>'<line x1="'+PL+'" y1="'+t.y+'" x2="'+(W-PR)+'" y2="'+t.y+'" stroke="#f0e6d8" stroke-width="1"/>').join('')
+    +ticks.map(t=>'<line x1="'+PL+'" y1="'+t.y+'" x2="'+(W-PR)+'" y2="'+t.y+'" stroke="#e6e6e6" stroke-width="1"/>').join('')
     // Y labels — larger and bolder
     +ticks.map(t=>'<text x="'+(PL-7)+'" y="'+(t.y+5)+'" text-anchor="end" font-size="16" fill="#999999" font-weight="700">'+t.l+'</text>').join('')
     // X labels — larger
@@ -879,68 +886,6 @@ function smoothPath(pts){
 
 function smoothPathRev(pts){ return smoothPath(pts.slice().reverse()); }
 
-function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts){
-  opts = opts || {};
-  const tgt = opts.targetData || null;
-  const W=500, H=220, PL=16, PR=16, PT=22, PB=34;
-  const iW=W-PL-PR, iH=H-PT-PB;
-  const nums=data.map(v=>{if(v===null||v===undefined||v==='') return null; const n=Number(v); return isNaN(n)?null:n;});
-  const valid=nums.filter(v=>v!==null);
-  const tgtValid = tgt ? tgt.filter(v=>v!==null&&v!==undefined&&!isNaN(v)) : [];
-  if(!valid.length && !tgtValid.length)
-    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px"><text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No data for this period</text></svg>';
-  const allVals = valid.concat(tgtValid);
-  const dMin=Math.min(...allVals), dMax=Math.max(...allVals), aR=(dMax-dMin)||1;
-  const yMin=dMin-aR*.15, yMax=dMax+aR*.15;
-  const yR=yMax-yMin||1;
-  const toX=i=>PL+(i/Math.max(nums.length-1,1))*iW;
-  const toY=v=>PT+iH-((Math.min(Math.max(v,yMin),yMax)-yMin)/yR)*iH;
-  const fmt=avgFmt||yAxisFmt||'#,##0';
-  // Latest
-  let li=-1; for(let i=nums.length-1;i>=0;i--){if(nums[i]!==null){li=i;break;}}
-  const lv=li>=0?nums[li]:null, lx=li>=0?toX(li):null, ly=lv!==null?toY(lv):null;
-  // X labels — first and last only
-  const lastIdx=labels.length-1;
-  // Line segments (gaps stay gaps)
-  const pts=nums.map((v,i)=>v!==null?[toX(i),toY(v)]:null);
-  const segs=[];let cur=[];
-  pts.forEach(p=>{if(p)cur.push(p);else if(cur.length){segs.push(cur);cur=[];}});
-  if(cur.length)segs.push(cur);
-  const lp=segs.map(smoothPath).join(' ');
-  // Target curve
-  let tp='';
-  if(tgt){
-    const tpts=tgt.map((v,i)=>(v===null||v===undefined||isNaN(v))?null:[toX(i),toY(v)]).filter(Boolean);
-    tp=smoothPath(tpts);
-  }
-  const cid='c'+(++chartSeq);
-  CHART_REG[cid]={labels:labels,data:nums,tgt:tgt||null,fmt:fmt,W:W,PL:PL,iW:iW,n:nums.length};
-  return '<svg data-cid="'+cid+'" onclick="chartTap(event)" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;cursor:pointer;" font-family="Inter,sans-serif">'
-    // Goal window tint — soft
-    +(function(){
-      const mi=opts.markIndex;
-      if(mi===undefined||mi===null||mi<0||mi>=nums.length) return '';
-      const mx=toX(mi), lbl=opts.markLabel||'';
-      const flip = mx > PL+iW*0.52;
-      return '<rect x="'+mx+'" y="'+PT+'" width="'+(W-PR-mx)+'" height="'+iH+'" rx="4" fill="#4a9e6a" fill-opacity="0.06"/>'
-        +(lbl?'<text x="'+(flip?mx-6:mx+6)+'" y="'+(PT+16)+'" text-anchor="'+(flip?'end':'start')+'" font-size="14" fill="#8a8a8a" font-weight="600">'+lbl+'</text>':'');
-    })()
-    // Baseline
-    +'<line x1="'+PL+'" y1="'+(PT+iH)+'" x2="'+(W-PR)+'" y2="'+(PT+iH)+'" stroke="#eeeeee" stroke-width="1"/>'
-    // Min / max corner markers
-    +'<text x="'+PL+'" y="'+(PT+14)+'" font-size="15" fill="#aaaaaa">'+fmtV(yMax,yAxisFmt||fmt)+'</text>'
-    +'<text x="'+PL+'" y="'+(PT+iH-4)+'" font-size="15" fill="#aaaaaa">'+fmtV(yMin,yAxisFmt||fmt)+'</text>'
-    // Target curve
-    +(tp?'<path d="'+tp+'" fill="none" stroke="#2f8f5b" stroke-width="2" stroke-dasharray="6,5" stroke-linecap="round"/>':'')
-    // Actual line
-    +(lp?'<path d="'+lp+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round"/>':'')
-    // Latest dot
-    +(lv!==null?'<circle cx="'+lx+'" cy="'+ly+'" r="6" fill="'+color+'" stroke="white" stroke-width="2.5"/>':'')
-    // X labels
-    +'<text x="'+PL+'" y="'+(H-8)+'" font-size="16" fill="#888888">'+labels[0]+'</text>'
-    +(lastIdx>0?'<text x="'+(W-PR)+'" y="'+(H-8)+'" text-anchor="end" font-size="16" fill="#888888">'+labels[lastIdx]+'</text>':'')
-    +'</svg>';
-}
 
 function buildMoodChart(filtered){
   const weeks={};
