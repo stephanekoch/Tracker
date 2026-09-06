@@ -1310,10 +1310,12 @@ function smoothWeight(dateStr, win){
   return vals.reduce((a,b)=>a+b,0)/vals.length;
 }
 
+// The most recent logged reading, as entered — used as the goal's starting point
 function latestWeight(){
   const withBw = entries.filter(e=>e.bodyweight).sort((a,b)=>b.date.localeCompare(a.date));
   if(!withBw.length) return null;
-  return smoothWeight(withBw[0].date) || parseFloat(withBw[0].bodyweight);
+  const v = parseFloat(withBw[0].bodyweight);
+  return isNaN(v) ? null : v;
 }
 
 // Least-squares slope of y against index, returns units per step
