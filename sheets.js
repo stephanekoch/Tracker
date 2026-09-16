@@ -53,8 +53,8 @@ export default async function handler(req, res) {
             targetWeight: g.target_weight,
             deadline: g.deadline,
             rate: g.rate || 'medium',
-            createdDate: g.created_at?.split('T')[0] || '',
-            startWeight: g.start_weight || null,
+            createdDate: g.created_date || (g.created_at ? g.created_at.split('T')[0] : ''),
+            startWeight: g.start_weight,
           }
         });
       }
@@ -83,26 +83,30 @@ export default async function handler(req, res) {
       }
 
       if (action === 'saveGoal') {
-        // Delete existing and insert new (single-goal model)
-        await sb('tracker_goal', { method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' } });
-        const r = await sb('tracker_goal', {
+        // Insert the new goal first; only remove older goals once it has landed
+        const r = await sb('tracker_goal?select=id', {
           method: 'POST',
+          prefer: 'return=representation',
           body: JSON.stringify({
             target_weight: parseFloat(payload.targetWeight) || null,
             deadline: payload.deadline || null,
-            rate: payload.rate || 'medium',
+            rate: payload.rate ? String(payload.rate) : 'medium',
             start_weight: parseFloat(payload.startWeight) || null,
+            created_date: payload.createdDate || null,
           }),
         });
-        if (!r.ok) { const e = await r.text(); throw new Error(e); }
+        const inserted = await r.json();
+        if (!r.ok) { return res.status(500).json({ success: false, error: JSON.stringify(inserted) }); }
+        const newId = inserted[0] && inserted[0].id;
+        if (newId) {
+          await sb(`tracker_goal?id=neq.${newId}`, { method: 'DELETE' });
+        }
         return res.status(200).json({ success: true });
       }
 
       if (action === 'deleteGoal') {
-        await sb('tracker_goal?id=neq.00000000-0000-0000-0000-000000000000', {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' }
-        });
+        const r = await sb('tracker_goal?id=neq.00000000-0000-0000-0000-000000000000', { method: 'DELETE' });
+        if (!r.ok) { return res.status(500).json({ success: false, error: await r.text() }); }
         return res.status(200).json({ success: true });
       }
 
