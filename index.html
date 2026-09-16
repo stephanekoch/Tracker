@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v70</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v71</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -1558,7 +1558,8 @@ function saveGoal(){
                   createdDate:todayStr(), startWeight:Math.round(cur*10)/10 };
   fetch(API,{method:'POST',body:JSON.stringify(payload)})
     .then(r=>r.json())
-    .then(()=>{
+    .then(d=>{
+      if(!d || d.success===false || d.error) throw new Error(d && d.error || 'save failed');
       goal={ targetWeight:tw, deadline:dl, rate:pendingRate,
              createdDate:todayStr(), startWeight:Math.round(cur*10)/10 };
       goal._k=curveExponent();
@@ -1571,7 +1572,8 @@ function saveGoal(){
 function removeGoal(){
   fetch(API,{method:'POST',body:JSON.stringify({action:'deleteGoal'})})
     .then(r=>r.json())
-    .then(()=>{
+    .then(d=>{
+      if(!d || d.success===false || d.error) throw new Error('delete failed');
       goal=null; closeGoalModal(); updateTargetHints(); renderDashboard();
     })
     .catch(()=>alert('Could not remove the goal.'));
@@ -1652,7 +1654,7 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row("version","v70");
+  row("version","v71");
   row('last load error', window.__lastLoadError || 'none');
   row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
   const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
