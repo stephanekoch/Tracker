@@ -1,10 +1,11 @@
-// Called by Vercel Cron at 20:00 UTC. Works out what is still outstanding for
+// Called by Vercel Cron at 18:00 UTC (19:00 London in summer, 18:00 in winter). Works out what is still outstanding for
 // today and pushes a single notification. Sends nothing if the day is done.
 
 import webpush from 'web-push';
 
-const SCRIPT_URL = process.env.APPS_SCRIPT_URL ||
-  'https://script.google.com/macros/s/AKfycbxL5R049IdcNE7AGr93pTL9MwYgfFlkdkxBDAPpxwr0sXrRzIXnxLlTT-dYZ0hkEw-evA/exec';
+const SUPABASE_URL = 'https://bhyjfyjydbaeoxipvsqq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_N4rk_9nA_oVu6AHC8qW4tQ_pARMMDLW';
+const SB = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
 // Mood only became required from this date — matches the app's own rule.
 const MOOD_REQUIRED_FROM = '2026-08-12';
@@ -69,16 +70,20 @@ export default async function handler(req, res) {
   try {
     const today = londonToday();
 
-    const [rowsRes, subRes] = await Promise.all([
-      fetch(`${SCRIPT_URL}?action=getAll`, { redirect: 'follow' }).then(r => r.text()),
-      fetch(`${SCRIPT_URL}?action=getSubscription`, { redirect: 'follow' }).then(r => r.text())
+    const [rowRes, subRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?date=eq.${today}&select=*`, { headers: SB }),
+      fetch(`${SUPABASE_URL}/rest/v1/tracker_settings?key=eq.push_subscription&select=value`, { headers: SB })
     ]);
-
-    let rows, subWrap;
-    try { rows = JSON.parse(rowsRes).rows || []; }
-    catch (e) { return res.status(502).json({ error: 'getAll did not return JSON', preview: rowsRes.slice(0, 160) }); }
-    try { subWrap = JSON.parse(subRes); }
-    catch (e) { return res.status(502).json({ error: 'getSubscription did not return JSON', preview: subRes.slice(0, 160) }); }
+    if (!rowRes.ok) return res.status(502).json({ error: 'Supabase entries query failed', preview: (await rowRes.text()).slice(0, 160) });
+    if (!subRes.ok) return res.status(502).json({ error: 'Supabase settings query failed', preview: (await subRes.text()).slice(0, 160) });
+    const rowsRaw = await rowRes.json();
+    const subRows = await subRes.json();
+    // Map to the field names the outstanding() check expects
+    const rows = rowsRaw.map(r => ({
+      date: r.date, steps: r.steps, bodyweight: r.bodyweight, calories: r.calories, sleep: r.sleep,
+      mood: r.mood, hackChinese: r.hack_chinese, duChinese: r.du_chinese, yoyoChinese: r.yoyo_chinese
+    }));
+    const subWrap = { subscription: subRows.length ? (subRows[0].value || '') : '' };
 
     if (!subWrap.subscription) {
       return res.status(200).json({
