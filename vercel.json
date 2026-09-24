@@ -42,12 +42,12 @@
       "schedule": "0 23 * * 0"
     },
     {
-      "path": "/api/google-health/sync",
+      "path": "/api/auto-sync",
       "schedule": "30 5 * * *"
     },
     {
       "path": "/api/google-health/sync-today",
-      "schedule": "30 17 * * *"
+      "schedule": "30 20 * * *"
     }
   ],
   "rewrites": [

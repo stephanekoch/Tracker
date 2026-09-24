@@ -35,6 +35,54 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .field{margin-bottom:12px;}
 .field:last-child{margin-bottom:0;}
 .field-lbl{font-size:12px;color:var(--muted);margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase;}
+.src-chips{display:flex;gap:8px;margin:2px 0 6px;flex-wrap:wrap;}
+.src-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:#fafafa;border-radius:20px;padding:5px 11px;font-family:'Inter',sans-serif;font-size:12px;color:#555;cursor:pointer;}
+.src-chip i{width:7px;height:7px;border-radius:50%;background:#cccccc;display:inline-block;}
+.src-chip.ok i{background:#4a9e6a;} .src-chip.warn{border-color:#f0b9ab;color:#c0392b;background:#fdf1ee;} .src-chip.warn i{background:#e85d40;}
+.auto-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid #f2f2f2;}
+.auto-row:first-of-type{border-top:0;}
+.auto-main{flex:1;min-width:0;}
+.auto-lbl{font-size:15px;color:var(--text);font-weight:500;display:flex;align-items:center;gap:8px;}
+.auto-unit{font-size:12px;color:var(--muted);font-weight:400;margin-left:-4px;}
+.auto-src{font-size:11.5px;color:#6f6f6f;margin-top:2px;line-height:1.4;}
+.auto-u{font-size:12.5px;color:#6f6f6f;margin-left:-9px;}
+.auto-src a{color:var(--accent);text-decoration:none;font-weight:600;}
+.auto-val{width:84px;text-align:right;font-family:'Inter',sans-serif;font-size:17px;font-weight:600;color:var(--text);border:1px solid transparent;background:transparent;border-radius:9px;padding:6px 8px;outline:none;-webkit-appearance:none;appearance:none;}
+.auto-val::placeholder{color:#cccccc;font-weight:400;}
+.auto-val:not([readonly]){border-color:var(--accent);background:var(--bg);}
+.auto-tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#c24a2e;background:#fdeee9;border-radius:6px;padding:3px 6px;}
+.auto-tag.hidden{display:none;}
+.auto-src .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:1px;background:#c8c8c8;}
+.auto-src .dot.ok{background:#3f8a5b;} .auto-src .dot.warn{background:#e85d40;}
+.auto-src a{display:inline-flex;align-items:center;gap:3px;}
+.auto-row.editing{display:none;}
+.auto-editor{padding:10px 0 12px;border-top:1px solid #f2f2f2;}
+.auto-editor.hidden{display:none;}
+.ae-box{background:#fff8f6;border:1.5px solid #e85d40;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+.ae-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ae-head label{font-size:15.5px;font-weight:600;color:var(--text);}
+#ae-synced{font-size:12px;color:#6f6f6f;}
+.ae-inputrow{display:flex;align-items:center;gap:8px;}
+.ae-inputrow.hidden{display:none;}
+#ae-input{flex:1;min-width:0;height:48px;box-sizing:border-box;border:1px solid #e3c9c1;border-radius:10px;background:#fff;padding:0 14px;font-family:'Inter',sans-serif;font-size:22px;font-weight:700;color:var(--text);outline:none;-webkit-appearance:none;}
+#ae-input:focus{border-color:#e85d40;}
+#ae-unit{font-size:15px;color:#6f6f6f;}
+.ae-gym{display:flex;gap:8px;} .ae-gym.hidden{display:none;}
+.ae-gym button{flex:1;height:44px;border-radius:10px;border:1px solid #e3c9c1;background:#fff;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;color:#3a3a3a;cursor:pointer;}
+.ae-gym button.on{background:#e85d40;border-color:#e85d40;color:#fff;}
+.ae-note{font-size:12px;line-height:1.45;color:#5a5a5a;}
+.ae-error{font-size:12px;color:#c0392b;font-weight:600;} .ae-error.hidden{display:none;}
+.ae-actions{display:flex;gap:8px;justify-content:flex-end;}
+.ae-actions button{height:44px;padding:0 18px;border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.ae-cancel{border:1px solid #efefef;background:#fff;color:#3a3a3a;}
+.ae-save{border:0;background:#c24a2e;color:#fff;}
+.auto-edit{width:30px;height:30px;flex-shrink:0;border:0;border-radius:50%;background:transparent;color:#bbbbbb;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.auto-edit.hide{visibility:hidden;}
+.auto-track{flex-shrink:0;}
+.auto-track.locked{opacity:.85;}
+.goal-mini{padding:2px 9px!important;font-size:10.5px!important;text-transform:none!important;letter-spacing:0!important;}
+#bw-target-hint:empty,#cal-target-hint:empty{display:none;}
+#bw-target-hint,#cal-target-hint{margin:-4px 0 6px;}
 .field input,.field select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;appearance:none;}
 .field input:focus,.field select:focus{border-color:var(--accent);}
 .sel-wrap{position:relative;}
@@ -160,7 +208,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v72</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v74</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -192,24 +240,67 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       </div>
       <div class="card">
         <div class="sec">Health</div>
-        <div class="toggle-row" onclick="tgl('gym')">
-          <div class="track" id="track-gym" style="background:#eeeeee"><div class="thumb" id="thumb-gym" style="left:3px"></div></div>
-          <div><div class="tgl-lbl">Gym session</div></div>
+        <div class="src-chips">
+          <button class="src-chip" id="chip-google" onclick="chipTap('google')"><i></i><span>Google Health</span></button>
+          <button class="src-chip" id="chip-fatsecret" onclick="chipTap('fatsecret')"><i></i><span>FatSecret</span></button>
         </div>
-        <div class="divider"></div>
-        <div id="gh-strip" class="field" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-          <div style="min-width:0">
-            <div class="field-lbl" style="margin:0 0 2px">Google Health</div>
-            <div id="gh-status" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Checking…</div>
+        <div class="auto-row" id="row-gym">
+          <div class="auto-main">
+            <div class="auto-lbl">Gym session<span class="auto-tag hidden" id="tag-gym">Edited</span></div>
+            <div class="auto-src" id="src-gym"></div>
           </div>
-          <button id="gh-btn" class="goal-btn" style="padding:6px 12px;font-size:11px;text-transform:none;letter-spacing:0;white-space:nowrap;flex-shrink:0" onclick="ghAction()">…</button>
+          <div class="track auto-track" id="track-gym" onclick="openEditor('gym')" style="background:#eeeeee"><div class="thumb" id="thumb-gym" style="left:3px"></div></div>
+          <button class="auto-edit" id="edit-gym" onclick="openEditor('gym')" aria-label="Edit Gym session"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
         </div>
-        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="markDirty();fmtSteps(this);updateProgress()"/></div>
-        <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="markDirty();updateProgress()"/><div id="bw-target-hint"></div></div>
-        <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="markDirty();updateProgress()"/><div id="cal-target-hint"></div></div>
-        <div class="field">
-          <div class="field-lbl">Sleep (h:mm)</div>
-          <input type="text" id="sleep-txt" placeholder="e.g. 7:30" oninput="markDirty();updateProgress()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:16px;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;"/>
+        <div class="auto-row" id="row-steps">
+          <div class="auto-main">
+            <div class="auto-lbl">Steps<span class="auto-tag hidden" id="tag-steps">Edited</span></div>
+            <div class="auto-src" id="src-steps"></div>
+          </div>
+          <input class="auto-val" type="text" inputmode="numeric" id="steps" placeholder="—" readonly oninput="markDirty();fmtSteps(this);updateProgress()"/>
+          <button class="auto-edit" id="edit-steps" onclick="openEditor('steps')" aria-label="Edit Steps"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        </div>
+        <div class="auto-row" id="row-bodyweight">
+          <div class="auto-main">
+            <div class="auto-lbl">Bodyweight <button class="goal-btn goal-mini" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button><span class="auto-tag hidden" id="tag-bodyweight">Edited</span></div>
+            <div class="auto-src" id="src-bodyweight"></div>
+          </div>
+          <input class="auto-val" type="number" step="0.1" id="bodyweight" placeholder="—" readonly oninput="markDirty();updateProgress()"/><span class="auto-u">kg</span>
+          <button class="auto-edit" id="edit-bodyweight" onclick="openEditor('bodyweight')" aria-label="Edit Bodyweight"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        </div>
+        <div id="bw-target-hint"></div>
+        <div class="auto-row" id="row-calories">
+          <div class="auto-main">
+            <div class="auto-lbl">Calories<span class="auto-tag hidden" id="tag-calories">Edited</span></div>
+            <div class="auto-src" id="src-calories"></div>
+          </div>
+          <input class="auto-val" type="number" id="calories" placeholder="—" readonly oninput="markDirty();updateProgress()"/><span class="auto-u">kcal</span>
+          <button class="auto-edit" id="edit-calories" onclick="openEditor('calories')" aria-label="Edit Calories"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        </div>
+        <div id="cal-target-hint"></div>
+        <div class="auto-row" id="row-sleep">
+          <div class="auto-main">
+            <div class="auto-lbl">Sleep<span class="auto-tag hidden" id="tag-sleep">Edited</span></div>
+            <div class="auto-src" id="src-sleep"></div>
+          </div>
+          <input class="auto-val" type="text" id="sleep-txt" placeholder="—" readonly oninput="markDirty();updateProgress()"/>
+          <button class="auto-edit" id="edit-sleep" onclick="openEditor('sleep')" aria-label="Edit Sleep"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        </div>
+        <div id="auto-editor" class="auto-editor hidden">
+          <div class="ae-box">
+            <div class="ae-head"><label for="ae-input" id="ae-label">Value</label><span id="ae-synced"></span></div>
+            <div class="ae-inputrow" id="ae-inputrow"><input id="ae-input" type="text" autocomplete="off"/><span id="ae-unit"></span></div>
+            <div class="ae-gym hidden" id="ae-gym">
+              <button type="button" id="ae-yes" onclick="aeGym(true)">Yes, trained</button>
+              <button type="button" id="ae-no" onclick="aeGym(false)">No</button>
+            </div>
+            <div class="ae-note" id="ae-note"></div>
+            <div class="ae-error hidden" id="ae-error"></div>
+            <div class="ae-actions">
+              <button type="button" class="ae-cancel" onclick="closeEditor()">Cancel</button>
+              <button type="button" class="ae-save" id="ae-save" onclick="saveEditor()">Save</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="card" id="mood-card">
@@ -254,7 +345,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           <div><div class="tgl-lbl">Yoyo Chinese</div><div class="tgl-sub">Video lessons</div></div>
         </div>
       </div>
-      <button class="save-btn" id="save-btn" onclick="handleSave()">Save to Sheet</button>
+      <button class="save-btn" id="save-btn" onclick="handleSave()">Save</button>
 
     </div>
 
@@ -517,17 +608,211 @@ function markDirty(){ formDirty = true; }
 function clearDirty(){ formDirty = false; }
 function formIsDirty(){ return formDirty; }
 
+/* ══ Automatic fields ═══════════════════════════════════
+   Gym, steps, bodyweight and sleep come from Google Health; calories from
+   FatSecret. They're read-only unless edited by hand, which marks them as
+   manual for that day so the sync never overwrites them. */
+const AUTO_SRC = { gym:'google', steps:'google', bodyweight:'google', sleep:'google', calories:'fatsecret' };
+const SRC_NAME = { google:'Google Health', fatsecret:'FatSecret' };
+const AUTO_INPUT = { steps:'steps', bodyweight:'bodyweight', calories:'calories', sleep:'sleep-txt' };
+let manualSet = new Set();
+let integ = { google:{status:'unknown'}, fatsecret:{status:'unknown'} };
+
+function autoValue(k){
+  if(k==='gym') return toggles.gym ? 'yes' : '';
+  return (document.getElementById(AUTO_INPUT[k]).value||'').trim();
+}
+const AUTO_LABEL = { gym:'Gym session', steps:'Steps', bodyweight:'Bodyweight', calories:'Calories', sleep:'Sleep' };
+const AUTO_UNIT = { bodyweight:'kg', calories:'kcal' };
+let autoVals = {};          // what each provider last reported for the selected day
+function fmtAuto(k,v){
+  if(v===null||v===undefined||v==='') return '';
+  if(k==='gym') return v ? 'trained' : 'no workout';
+  if(k==='steps') return parseInt(v).toLocaleString();
+  if(k==='calories') return parseInt(v).toLocaleString()+' kcal';
+  if(k==='bodyweight') return v+' kg';
+  return String(v);
+}
+function syncTime(k){
+  const t=(integ[AUTO_SRC[k]]||{}).lastSync; if(!t) return '';
+  return new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+function renderAuto(){
+  const date = document.getElementById('entry-date').value || todayStr();
+  const isToday = date===todayStr();
+  Object.keys(AUTO_SRC).forEach(k=>{
+    const manual = manualSet.has(k);
+    const srcKey = AUTO_SRC[k], src = SRC_NAME[srcKey];
+    const status = (integ[srcKey]||{}).status;
+    const has = !!autoValue(k);
+    let dot='', text='';
+    if(manual){
+      const sv = fmtAuto(k, autoVals[k]);
+      dot='warn';
+      text = (sv ? 'Synced '+sv : 'Set by you')+' · <a href="#" onclick="resetField(\''+k+'\');return false;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>Use synced</a>';
+    } else if(status==='reconnect'){ dot='warn'; text=src+' link expired'; }
+    else if(status!=='connected' && !has){ text=src+' not connected'; }
+    else if(k==='gym'){
+      if(has){ dot='ok'; text='Workout · '+src; }
+      else text = isToday ? 'No workout yet today' : 'No workout logged';
+    } else if(has){
+      dot='ok';
+      text = k==='sleep' ? src+' · last night' : (isToday && syncTime(k) ? src+' · '+syncTime(k) : src);
+    } else if(isToday && k==='bodyweight') text='Not weighed yet — tap ✎ to add';
+    else if(isToday && k==='calories') text='Nothing logged in '+src+' yet';
+    else text = isToday ? 'Waiting for '+src : 'No data from '+src;
+    document.getElementById('src-'+k).innerHTML = '<span class="dot '+dot+'"></span>'+text;
+    document.getElementById('tag-'+k).classList.toggle('hidden', !manual);
+    if(AUTO_INPUT[k]) document.getElementById(AUTO_INPUT[k]).readOnly = true;
+  });
+  document.getElementById('track-gym').classList.add('locked');
+}
+
+/* ── Inline editor: one panel that opens under whichever row is being edited ── */
+let aeKey=null, aeGymVal=false;
+function openEditor(k){
+  closeEditor();
+  aeKey=k;
+  const date=document.getElementById('entry-date').value||todayStr();
+  const row=document.getElementById('row-'+k), ed=document.getElementById('auto-editor');
+  row.after(ed); row.classList.add('editing'); ed.classList.remove('hidden');
+  document.getElementById('ae-label').textContent=AUTO_LABEL[k];
+  const sv=fmtAuto(k, autoVals[k]);
+  document.getElementById('ae-synced').textContent = sv ? 'Synced value: '+sv : '';
+  const isGym = k==='gym';
+  document.getElementById('ae-inputrow').classList.toggle('hidden', isGym);
+  document.getElementById('ae-gym').classList.toggle('hidden', !isGym);
+  document.getElementById('ae-error').classList.add('hidden');
+  const d=new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  document.getElementById('ae-note').textContent='Your value is kept for '+d+'. '+SRC_NAME[AUTO_SRC[k]]+' won\u2019t overwrite it.';
+  if(isGym){ aeGym(!!toggles.gym); return; }
+  const inp=document.getElementById('ae-input');
+  inp.value = k==='steps' ? (autoValue(k)||'').replace(/,/g,'') : autoValue(k);
+  inp.setAttribute('inputmode', k==='sleep' ? 'numeric' : (k==='bodyweight' ? 'decimal' : 'numeric'));
+  inp.placeholder = k==='sleep' ? '7:30' : (k==='bodyweight' ? '67.5' : '0');
+  document.getElementById('ae-unit').textContent = AUTO_UNIT[k]||'';
+  setTimeout(()=>{ inp.focus(); inp.select(); }, 30);
+}
+function aeGym(v){ aeGymVal=v; document.getElementById('ae-yes').classList.toggle('on',v); document.getElementById('ae-no').classList.toggle('on',!v); }
+function closeEditor(){
+  document.querySelectorAll('.auto-row.editing').forEach(r=>r.classList.remove('editing'));
+  document.getElementById('auto-editor').classList.add('hidden');
+  aeKey=null;
+}
+function aeParse(k, raw){
+  raw=(raw||'').trim().replace(/,/g,'');
+  if(raw==='') return { ok:true, v:'' };
+  if(k==='steps'){ return /^\d{1,6}$/.test(raw) ? {ok:true,v:String(parseInt(raw))} : {ok:false,msg:'Steps should be a whole number'}; }
+  if(k==='calories'){ return /^\d{1,5}$/.test(raw) ? {ok:true,v:String(parseInt(raw))} : {ok:false,msg:'Calories should be a whole number'}; }
+  if(k==='bodyweight'){ const n=parseFloat(raw); return (isFinite(n)&&n>=25&&n<=300) ? {ok:true,v:String(Math.round(n*10)/10)} : {ok:false,msg:'Enter a weight in kg, e.g. 67.5'}; }
+  if(k==='sleep'){ const m=raw.match(/^(\d{1,2})[:.h](\d{1,2})$/); if(m&&+m[2]<60&&+m[1]<=16) return {ok:true,v:(+m[1])+':'+String(+m[2]).padStart(2,'0')}; return {ok:false,msg:'Use h:mm, e.g. 7:30'}; }
+  return {ok:true,v:raw};
+}
+async function saveEditor(){
+  const k=aeKey; if(!k) return;
+  const date=document.getElementById('entry-date').value||todayStr();
+  let val;
+  if(k==='gym') val=aeGymVal;
+  else {
+    const p=aeParse(k, document.getElementById('ae-input').value);
+    if(!p.ok){ const er=document.getElementById('ae-error'); er.textContent=p.msg; er.classList.remove('hidden'); return; }
+    val=p.v;
+  }
+  manualSet.add(k);
+  // Paint it straight away
+  if(k==='gym') setTgl('gym', val);
+  else if(k==='steps') document.getElementById('steps').value = val ? parseInt(val).toLocaleString() : '';
+  else document.getElementById(AUTO_INPUT[k]).value = val;
+  closeEditor(); renderAuto(); updateProgress(); updateTargetHints();
+  const btn=document.getElementById('ae-save'); btn.disabled=true;
+  const field = k==='sleep' ? 'sleep' : k;
+  try{
+    const body={action:'saveRow', date, manualFields:[...manualSet]}; body[field]=val;
+    const r=await fetch(API,{method:'POST',body:JSON.stringify(body)}); const d=await r.json();
+    if(d && d.error) throw new Error(d.error);
+    const idx=entries.findIndex(e=>e.date===date);
+    const patch={date, manualFields:[...manualSet]}; patch[field]=val;
+    if(idx>=0) entries[idx]={...entries[idx],...patch}; else { entries.push({...patch, autoValues:{}}); entries.sort((a,b)=>a.date.localeCompare(b.date)); }
+    writeCache(entries, goal); renderDashboard(); renderHistory();
+    showToast(AUTO_LABEL[k]+' saved');
+  }catch(e){ alert('Could not save '+AUTO_LABEL[k]+': '+(e.message||e)); }
+  btn.disabled=false;
+}
+function editField(k){ openEditor(k); }
+function gymTap(){ openEditor('gym'); }
+async function resetField(k){
+  const date=document.getElementById('entry-date').value; if(!date) return;
+  manualSet.delete(k);
+  // Show the synced value immediately if we have it, then confirm with the server
+  if(autoVals[k]!==undefined){
+    if(k==='gym') setTgl('gym', !!autoVals[k]);
+    else if(k==='steps') document.getElementById('steps').value = autoVals[k] ? parseInt(autoVals[k]).toLocaleString() : '';
+    else document.getElementById(AUTO_INPUT[k]).value = autoVals[k];
+  }
+  renderAuto(); updateProgress();
+  try{
+    const body={action:'saveRow',date,manualFields:[...manualSet]};
+    if(autoVals[k]!==undefined) body[k]=autoVals[k];
+    await fetch(API,{method:'POST',body:JSON.stringify(body)});
+    await refreshDate(date, autoVals[k]===undefined);
+  }catch(e){ alert('Could not switch back to automatic: '+(e.message||e)); }
+}
+// Pull the latest values for a date (optionally asking the providers first) and repaint
+async function refreshDate(date, pullFirst){
+  if(pullFirst){ try{ await fetch('/api/auto-sync?date='+date,{cache:'no-store'}); }catch(e){} }
+  const r=await fetch(API+'?action=getRow&date='+date,{cache:'no-store'}); const row=await r.json();
+  if(row && row.date){
+    const idx=entries.findIndex(e=>e.date===row.date);
+    if(idx>=0) entries[idx]=row; else { entries.push(row); entries.sort((a,b)=>a.date.localeCompare(b.date)); }
+    writeCache(entries, goal);
+    if((document.getElementById('entry-date').value||todayStr())===date && !isDirty()) fillForm(row);
+    renderDashboard(); renderHistory();
+  }
+}
+function isDirty(){ return formIsDirty(); }
+async function intRefresh(){
+  try{ const r=await fetch('/api/integrations',{cache:'no-store'}); integ=await r.json(); }catch(e){}
+  ['google','fatsecret'].forEach(k=>{
+    const c=document.getElementById('chip-'+k); const st=(integ[k]||{}).status;
+    c.classList.toggle('ok', st==='connected'); c.classList.toggle('warn', st==='reconnect');
+    const t=(integ[k]||{}).lastSync ? new Date(integ[k].lastSync) : null;
+    c.querySelector('span').textContent = SRC_NAME[k] + (st==='connected' ? (t ? ' · '+t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '') : st==='reconnect' ? ' · reconnect' : ' · connect');
+  });
+  renderAuto();
+}
+function chipTap(k){
+  const st=(integ[k]||{}).status;
+  if(st==='connected'){ const e=(integ[k]||{}).lastError; showToast(e ? SRC_NAME[k]+': '+e : SRC_NAME[k]+' is connected'); return; }
+  window.location.href = k==='google' ? '/api/google-health/auth' : '/api/fatsecret/auth';
+}
+const _pulled = new Set();
+function maybePull(date){
+  // When looking at a recent day with gaps, ask the providers once per session
+  if(_pulled.has(date) || !date) return;
+  const age = daysBetween(date, todayStr());
+  if(age<0 || age>30) return;
+  if(['steps','bodyweight','calories','sleep'].every(k=>manualSet.has(k)||autoValue(k))) return;
+  _pulled.add(date); refreshDate(date, true);
+}
+
 function readForm(){
-  const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
-  const sleep = (document.getElementById('sleep-txt').value||'').trim();
-  return { date:document.getElementById('entry-date').value, gym:toggles.gym, mood:mood, 
-    steps:stepsRaw, bodyweight:document.getElementById('bodyweight').value, calories:document.getElementById('calories').value,
-    sleep, hackChinese:toggles.hackChinese, hackChineseWords:document.getElementById('hackChineseWords').value,
-    duChinese:toggles.duChinese, yoyoChinese:toggles.yoyoChinese };
+  const f = { date:document.getElementById('entry-date').value, mood:mood,
+    hackChinese:toggles.hackChinese, hackChineseWords:document.getElementById('hackChineseWords').value,
+    duChinese:toggles.duChinese, yoyoChinese:toggles.yoyoChinese, manualFields:[...manualSet] };
+  // Auto fields are only sent when typed in by hand — otherwise saving would blank them
+  if(manualSet.has('gym')) f.gym = toggles.gym;
+  if(manualSet.has('steps')) f.steps = document.getElementById('steps').value.replace(/,/g,'');
+  if(manualSet.has('bodyweight')) f.bodyweight = document.getElementById('bodyweight').value;
+  if(manualSet.has('calories')) f.calories = document.getElementById('calories').value;
+  if(manualSet.has('sleep')) f.sleep = (document.getElementById('sleep-txt').value||'').trim();
+  return f;
 }
 
 function fillForm(e){
   document.getElementById('entry-date').value=e.date;
+  manualSet = new Set(e.manualFields||[]);
+  autoVals = e.autoValues || {};
+  if(typeof closeEditor==='function' && document.getElementById('auto-editor')) closeEditor();
   ['gym','hackChinese','duChinese','yoyoChinese'].forEach(k=>setTgl(k,e[k]));
   document.getElementById('words-wrap').classList.toggle('hidden',!e.hackChinese);
   mood = (e.mood||'').toLowerCase();
@@ -550,6 +835,7 @@ function fillForm(e){
   document.getElementById('sleep-txt').value = sleepVal;
   refreshMoodOptional();
   updateTargetHints();
+  renderAuto();
 }
 function blankForm(date){
   fillForm({date,gym:false,mood:'',steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
@@ -559,6 +845,7 @@ function onDateChange(){
   const date=document.getElementById('entry-date').value;
   const ex=entries.find(e=>e.date===date);
   if(ex) fillForm(ex); else blankForm(date);
+  maybePull(date);
 }
 
 // Save
@@ -583,8 +870,8 @@ function doSave(form){
         console.warn('Mood was sent but not written:', res);
       }
       const idx=entries.findIndex(e=>e.date===form.date);
-      if(idx>=0) entries[idx]=form; else { entries.push(form); entries.sort((a,b)=>a.date.localeCompare(b.date)); }
-      btn.textContent='Save to Sheet'; btn.disabled=false; setDot('#4a9e6a','Synced with your Google Sheet');
+      if(idx>=0) entries[idx]={...entries[idx],...form}; else { entries.push(form); entries.sort((a,b)=>a.date.localeCompare(b.date)); }
+      btn.textContent='Save'; btn.disabled=false; setDot('#4a9e6a','Saved');
       showToast(); switchTab('history');
     })
     .catch(()=>{ btn.textContent='Error — retry'; btn.classList.add('error'); btn.disabled=false; });
@@ -1606,11 +1893,18 @@ function showStatusInfo(){
   document.getElementById('status-modal').classList.remove('hidden');
 }
 
+async function diagSync(){
+  const d=document.getElementById('entry-date').value||todayStr(); const o=document.getElementById('diag-sync-out'); if(o) o.textContent='…';
+  try{ const r=await fetch('/api/auto-sync?date='+d,{cache:'no-store'}); const j=await r.json();
+    if(o) o.textContent = j.ok ? JSON.stringify((j.dates||{})[d]||{}) + (Object.keys(j.errors||{}).length?' errors: '+JSON.stringify(j.errors):'') : (j.error||'failed');
+    await refreshDate(d,false); intRefresh();
+  }catch(e){ if(o) o.textContent=String(e.message||e); }
+}
 function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row("version","v72");
+  row("version","v74");
   row('last load error', window.__lastLoadError || 'none');
   row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
   const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
@@ -1625,6 +1919,9 @@ function showDiag(){
   row('last save', ls ? ('mood sent "'+(ls.moodSent||'')+'" → written "'+(ls.moodWritten||'')+'"'
       + (ls.moodError?' <span style="color:#c0392b">'+ls.moodError+'</span>':'')
       + (ls.maxColumns?' · sheet has '+ls.maxColumns+' columns':'')) : 'none yet this session');
+  row('google health', ((integ.google||{}).status||'?') + ((integ.google||{}).webhook?' · webhook secret set':' · <span style="color:#c0392b">no webhook secret</span>') + ((integ.google||{}).lastError?' · <span style="color:#c0392b">'+integ.google.lastError+'</span>':''));
+  row('fatsecret', ((integ.fatsecret||{}).status||'?') + ((integ.fatsecret||{}).lastError?' · <span style="color:#c0392b">'+integ.fatsecret.lastError+'</span>':''));
+  row('manual sync', '<button onclick="diagSync()" style="border:1px solid #e85d40;background:transparent;color:#e85d40;border-radius:6px;padding:2px 8px;font-family:Inter,sans-serif;font-size:11px;cursor:pointer;">Pull '+(document.getElementById('entry-date').value||todayStr())+' now</button> <span id="diag-sync-out"></span>');
   row('today',todayStr());
   row('entries loaded',entries.length);
   const nMood = entries.filter(e=>e.mood).length;
@@ -1731,59 +2028,6 @@ async function enableRemindersManually(){
 
 
 
-/* ══ Google Health sync ═══════════════════════════════════
-   Nightly cron pulls steps / sleep / weight / calories / gym from the
-   Google Health API. This strip shows the link state and offers a manual
-   pull for the date currently selected in the form. */
-let ghState = { status:'unknown' };
-function ghRender(){
-  const st=document.getElementById('gh-status'), btn=document.getElementById('gh-btn');
-  if(!st||!btn) return;
-  const s=ghState.status;
-  if(!ghState.configured){ st.textContent='Not set up yet'; btn.textContent='Set up'; btn.disabled=true; return; }
-  btn.disabled=false;
-  if(s==='connected'){
-    const t=ghState.lastSync? new Date(ghState.lastSync) : null;
-    st.textContent = t ? 'Synced '+t.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : 'Connected · not synced yet';
-    st.style.color='var(--muted)'; btn.textContent='Sync now';
-  } else if(s==='reconnect'){
-    st.textContent='Link expired — reconnect'; st.style.color='#c0392b'; btn.textContent='Reconnect';
-  } else if(s==='syncing'){
-    st.textContent='Syncing…'; st.style.color='var(--muted)'; btn.textContent='…'; btn.disabled=true;
-  } else {
-    st.textContent='Not connected'; st.style.color='var(--muted)'; btn.textContent='Connect';
-  }
-}
-async function ghRefresh(){
-  try{ const r=await fetch('/api/google-health/status',{cache:'no-store'}); ghState=await r.json(); }
-  catch(e){ ghState={status:'unknown',configured:true}; }
-  ghRender();
-}
-async function ghAction(){
-  if(ghState.status!=='connected'){ window.location.href='/api/google-health/auth'; return; }
-  const date=document.getElementById('entry-date').value||todayStr();
-  ghState.status='syncing'; ghRender();
-  try{
-    const r=await fetch('/api/google-health/sync?date='+date,{cache:'no-store'});
-    const d=await r.json();
-    if(!d.ok){ throw new Error(d.error||d.code||'sync failed'); }
-    // Refresh this row from Supabase and repaint the form
-    const rr=await fetch(API+'?action=getRow&date='+date,{cache:'no-store'});
-    const row=await rr.json();
-    if(row && row.date){
-      const idx=entries.findIndex(e=>e.date===row.date);
-      if(idx>=0) entries[idx]={...entries[idx],...row}; else entries.push(row);
-      entries.sort((a,b)=>a.date.localeCompare(b.date));
-      writeCache(entries, goal);
-      fillForm(entries.find(e=>e.date===date));
-      renderDashboard(); renderHistory();
-    }
-    const got=Object.keys(d.synced||{}).filter(k=>k!=='gym'||d.synced.gym);
-    showToast(got.length ? 'Pulled '+got.join(', ')+' from Google Health' : 'Nothing new from Google Health for '+date);
-  }catch(e){ alert('Google Health sync failed: '+(e.message||e)); }
-  await ghRefresh();
-}
-
 // Init — render from the local cache first, then refresh in the background.
 // Apps Script cold-starts take seconds and sometimes fail outright; caching
 // means the app is usable immediately and a slow request stops mattering.
@@ -1806,7 +2050,16 @@ function writeCache(rows, goalObj){
 }
 
 function applyData(rows, goalObj, fromCache){
-  if(!window.__ghInit){ window.__ghInit=true; ghRefresh(); }
+  if(!window.__intInit){ window.__intInit=true; intRefresh(); }
+  if(!fromCache && !window.__lightPulled){
+    window.__lightPulled=true;
+    // App open: pull today's numbers, then quietly repaint if anything changed
+    fetch('/api/auto-sync?light=1',{cache:'no-store'}).then(r=>r.json()).then(d=>{
+      const wrote = d && d.dates && Object.values(d.dates).some(x=>(x.google&&x.google.wrote)||(x.fatsecret&&x.fatsecret.wrote));
+      intRefresh();
+      if(wrote) refreshDate(todayStr(), false);
+    }).catch(()=>{});
+  }
   entries = rows || [];
   if(goalObj !== undefined){
     goal = goalObj || null;

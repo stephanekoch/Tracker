@@ -1,34 +1,42 @@
-# Google Health sync — setup
+# Tracker — automatic sync setup
 
-## 1. Google Cloud (one-off, ~10 min)
-1. https://console.cloud.google.com → New project (e.g. "tracker").
-2. APIs & Services → Library → search "Google Health API" → Enable.
-3. APIs & Services → OAuth consent screen → External → app name + your email → Save.
-   - Scopes: add the four `googlehealth.*.readonly` scopes (activity_and_fitness, health_metrics_and_measurements, sleep, nutrition).
-   - Test users: add your Gmail address. Leave Publishing status = **Testing**.
-4. APIs & Services → Credentials → Create credentials → OAuth client ID → Web application.
-   - Authorised redirect URI: `https://tracker-drab-three.vercel.app/api/google-health/callback`
-   - Copy the Client ID and Client secret.
+Everything below is one-off.
 
-## 2. Vercel
-Project → Settings → Environment Variables → add `GH_CLIENT_ID` and `GH_CLIENT_SECRET`. Redeploy.
+## 1. Supabase
+SQL Editor → run `tracker_auto_fields.sql` (adds the manual-override column; safe to re-run).
 
-## 3. Supabase
-Run `tracker_settings.sql` (harmless if the table already exists).
+## 2. FatSecret (calories)
+1. Start logging food in the **FatSecret** app (free) instead of MyFitnessPal.
+2. Go to https://platform.fatsecret.com/register → create a free developer account → create an API key.
+3. Copy the **Consumer Key** and **Consumer Secret** (the OAuth 1.0 pair — not Client ID / Client Secret).
+   The IP-restriction settings there only apply to OAuth 2.0, so you can ignore them.
+
+## 3. Vercel → Settings → Environment Variables
+| Key | Value | Sensitive |
+|---|---|---|
+| `GH_WEBHOOK_SECRET` | `kWONQDgVHlYh_TyU2uShlaatywcBZ0-z` | yes |
+| `FS_CONSUMER_KEY` | FatSecret Consumer Key | no |
+| `FS_CONSUMER_SECRET` | FatSecret Consumer Secret | yes |
+
+(`GH_CLIENT_ID` / `GH_CLIENT_SECRET` stay as they are.)
 
 ## 4. GitHub
-Upload `index.html`, `vercel.json` and the four files under `api/google-health/`.
+Upload the contents of this zip (drag everything, including the `api` folder). Wait for Vercel → **Ready**.
 
-## 5. Connect
-Tracker → Log tab → **Connect** next to Google Health → approve → **Sync now**.
-First time, also open
-`https://tracker-drab-three.vercel.app/api/google-health/sync?date=2026-09-23&debug=1`
-and send me the JSON so I can confirm the field names Google returns for weight and calories.
+## 5. Connect FatSecret
+Tracker → Log tab → tap the **FatSecret · connect** chip → sign in → approve.
+If you land on a "FatSecret blocked the connection" page, their bot protection refused Vercel; the page explains the Postman workaround.
 
-## What syncs
-- Steps · sleep (main sleep, naps excluded) · bodyweight (last reading of the day) · calories eaten (if nutrition data reaches Google Health) · gym (switched on when a strength-type exercise session exists).
-- Cron: 05:30 UTC for yesterday (final), 17:30 UTC for today so far (before the 18:00 reminder).
-- Mood and Chinese are never touched. A synced value overwrites a manual one for that field.
+## 6. Register the Google webhook
+Open https://tracker-drab-three.vercel.app/api/google-health/register and follow the three steps (paste into Google's "Try it" panel).
+You'll need your Google Cloud **project number** (Cloud console home page → Project info).
 
-## Weekly reconnect
-In Testing mode Google expires the link after 7 days; the strip then shows **Reconnect**. One tap.
+## 7. Check
+Tap the version label (v74) in the app → the diagnostics panel shows both connections and has a **Pull now** button.
+
+## How it behaves
+- Gym, steps, bodyweight, sleep: from Google Health, pushed by webhook within minutes of your phone syncing.
+- Calories: from FatSecret — refreshed when you open the app, whenever a Google update arrives (max every 15 min), and by the crons.
+- Safety-net crons: 05:30 and 20:30 UTC.
+- Tap ✎ on any auto field to type a value by hand; that day's value is then never overwritten. "make automatic" undoes it.
+- The evening reminder now only mentions mood and Chinese.

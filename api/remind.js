@@ -20,16 +20,12 @@ function londonToday() {
 
 // Same fields the ring counts, in the order they appear in the app.
 function outstanding(row, date) {
-  if (!row) {
-    const base = ['Steps', 'Bodyweight', 'Calories', 'Sleep', 'HackChinese', 'DuChinese', 'Yoyo'];
-    return date >= MOOD_REQUIRED_FROM ? base.concat('Mood') : base;
-  }
+  // Steps, bodyweight, calories, sleep and gym now arrive automatically,
+  // so the reminder only covers what still needs a tap.
+  const needsMood = date >= MOOD_REQUIRED_FROM;
+  if (!row) return (needsMood ? ['Mood'] : []).concat(['HackChinese', 'DuChinese', 'Yoyo']);
   const missing = [];
-  if (!row.steps) missing.push('Steps');
-  if (!row.bodyweight) missing.push('Bodyweight');
-  if (!row.calories) missing.push('Calories');
-  if (!row.sleep) missing.push('Sleep');
-  if (date >= MOOD_REQUIRED_FROM && !row.mood) missing.push('Mood');
+  if (needsMood && !row.mood) missing.push('Mood');
   if (!row.hackChinese) missing.push('HackChinese');
   if (!row.duChinese) missing.push('DuChinese');
   if (!row.yoyoChinese) missing.push('Yoyo');

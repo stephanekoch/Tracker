@@ -35,7 +35,9 @@ export default async function handler(req, res) {
     await setSetting('gh_status', 'connected');
     await setSetting('gh_connected_at', new Date().toISOString());
     await setSetting('gh_last_error', '');
-    return res.status(200).send(page('Google Health connected', 'Steps, sleep, weight and calories will now sync automatically. In Testing mode Google expires this link after 7 days — the app will show a Reconnect button when that happens.'));
+    await setSetting('gh_access_token', '');
+    await setSetting('gh_access_exp', '0');
+    return res.status(200).send(page('Google Health connected', 'Steps, sleep, bodyweight and gym sessions will now sync automatically.'));
   } catch (e) {
     return res.status(500).send(page('Not connected', String(e && e.message || e)));
   }

@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         if (!r.ok) throw new Error(JSON.stringify(rows));
         return res.status(200).json({
           rows: rows.map(mapOut),
-          scriptVersion: 'supabase-v1'
+          scriptVersion: 'supabase-v3'
         });
       }
 
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'diag') {
-        return res.status(200).json({ ok: true, backend: 'supabase', scriptVersion: 'supabase-v1' });
+        return res.status(200).json({ ok: true, backend: 'supabase', scriptVersion: 'supabase-v3' });
       }
 
       return res.status(400).json({ error: 'Unknown action' });
@@ -71,8 +71,10 @@ export default async function handler(req, res) {
       const action = payload.action;
 
       if (action === 'saveRow') {
+        // Only write what the app sent. Auto fields (gym/steps/bodyweight/calories/sleep)
+        // are sent only when typed in by hand, and are then listed in manualFields so
+        // the automatic sync leaves them alone.
         const row = mapIn(payload);
-        // Upsert on date
         const r = await sb('tracker_entries?on_conflict=date', {
           method: 'POST',
           prefer: 'return=minimal,resolution=merge-duplicates',
@@ -132,23 +134,25 @@ function mapOut(r) {
     hackChineseWords: r.hack_chinese_words ? String(r.hack_chinese_words) : '',
     duChinese: r.du_chinese || false,
     yoyoChinese: r.yoyo_chinese || false,
-    scriptVersion: 'supabase-v1',
+    manualFields: r.manual_fields || [],
+    autoValues: r.auto_values || {},
+    scriptVersion: 'supabase-v3',
   };
 }
 
 function mapIn(d) {
-  return {
-    date: d.date,
-    gym: !!d.gym,
-    mood: d.mood || null,
-    vitality_points: parseInt(d.vitalityPoints) || 0,
-    steps: d.steps ? parseInt(String(d.steps).replace(/,/g,'')) || null : null,
-    bodyweight: d.bodyweight ? parseFloat(d.bodyweight) || null : null,
-    calories: d.calories ? parseInt(d.calories) || null : null,
-    sleep: d.sleep || null,
-    hack_chinese: !!d.hackChinese,
-    hack_chinese_words: d.hackChineseWords ? parseInt(d.hackChineseWords) || null : null,
-    du_chinese: !!d.duChinese,
-    yoyo_chinese: !!d.yoyoChinese,
-  };
+  const has = k => Object.prototype.hasOwnProperty.call(d, k);
+  const out = { date: d.date };
+  if (has('gym')) out.gym = !!d.gym;
+  if (has('mood')) out.mood = d.mood || null;
+  if (has('steps')) out.steps = d.steps ? parseInt(String(d.steps).replace(/,/g,'')) || null : null;
+  if (has('bodyweight')) out.bodyweight = d.bodyweight ? parseFloat(d.bodyweight) || null : null;
+  if (has('calories')) out.calories = d.calories ? parseInt(d.calories) || null : null;
+  if (has('sleep')) out.sleep = d.sleep || null;
+  if (has('hackChinese')) out.hack_chinese = !!d.hackChinese;
+  if (has('hackChineseWords')) out.hack_chinese_words = d.hackChineseWords ? parseInt(d.hackChineseWords) || null : null;
+  if (has('duChinese')) out.du_chinese = !!d.duChinese;
+  if (has('yoyoChinese')) out.yoyo_chinese = !!d.yoyoChinese;
+  if (has('manualFields')) out.manual_fields = Array.isArray(d.manualFields) ? d.manualFields : [];
+  return out;
 }
