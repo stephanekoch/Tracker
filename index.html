@@ -774,15 +774,15 @@ async function intRefresh(){
   try{ const r=await fetch('/api/integrations',{cache:'no-store'}); integ=await r.json(); }catch(e){}
   ['google','fatsecret'].forEach(k=>{
     const c=document.getElementById('chip-'+k); const st=(integ[k]||{}).status;
-    c.classList.toggle('ok', st==='connected'); c.classList.toggle('warn', st==='reconnect');
+    c.classList.toggle('ok', st==='connected'); c.classList.toggle('warn', st==='reconnect'||st==='error');
     const t=(integ[k]||{}).lastSync ? new Date(integ[k].lastSync) : null;
-    c.querySelector('span').textContent = SRC_NAME[k] + (st==='connected' ? (t ? ' · '+t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '') : st==='reconnect' ? ' · reconnect' : ' · connect');
+    c.querySelector('span').textContent = SRC_NAME[k] + (st==='connected' ? (t ? ' · '+t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '') : st==='reconnect' ? ' · reconnect' : st==='error' ? ' · error' : ' · connect');
   });
   renderAuto();
 }
 function chipTap(k){
   const st=(integ[k]||{}).status;
-  if(st==='connected'){ const e=(integ[k]||{}).lastError; showToast(e ? SRC_NAME[k]+': '+e : SRC_NAME[k]+' is connected'); return; }
+  if(st==='connected'||st==='error'){ const e=(integ[k]||{}).lastError; showToast(e ? SRC_NAME[k]+': '+e : SRC_NAME[k]+' is connected'); return; }
   window.location.href = '/api/connect?provider='+k;
 }
 const _pulled = new Set();

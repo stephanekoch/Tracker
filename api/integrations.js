@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     google: { configured: !!process.env.GH_CLIENT_ID, status: gh.gh_status || 'not_connected', lastSync: gh.gh_last_sync || null, lastError: gh.gh_last_error || null,
               webhook: !!process.env.GH_WEBHOOK_SECRET },
-    fatsecret: { configured: !!process.env.FS_CONSUMER_KEY, status: (fs.fs_token || process.env.FS_ACCESS_TOKEN) ? (fs.fs_status || 'connected') : 'not_connected',
+    fatsecret: { configured: !!process.env.FS_CONSUMER_KEY, status: !(fs.fs_token || process.env.FS_ACCESS_TOKEN) ? 'not_connected' : (fs.fs_last_error ? 'error' : (fs.fs_status || 'connected')),
                  lastSync: fs.fs_last_sync || null, lastError: fs.fs_last_error || null },
   });
 }

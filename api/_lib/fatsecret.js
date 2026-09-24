@@ -4,11 +4,12 @@ import { getSetting } from './core.js';
 const API = 'https://platform.fatsecret.com/rest/server.api';
 export const FS_AUTH = 'https://authentication.fatsecret.com/oauth';
 
+const clean = v => (v == null ? '' : String(v)).replace(/[\s\u200B\uFEFF]+/g, '');
 const enc = s => encodeURIComponent(String(s)).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
 export function signedParams(method, url, params, tokenSecret = '') {
   const all = {
-    oauth_consumer_key: process.env.FS_CONSUMER_KEY,
+    oauth_consumer_key: clean(process.env.FS_CONSUMER_KEY),
     oauth_nonce: crypto.randomBytes(12).toString('hex'),
     oauth_signature_method: 'HMAC-SHA1',
     oauth_timestamp: String(Math.floor(Date.now() / 1000)),
@@ -17,14 +18,14 @@ export function signedParams(method, url, params, tokenSecret = '') {
   };
   const norm = Object.keys(all).sort().map(k => `${enc(k)}=${enc(all[k])}`).join('&');
   const base = `${method.toUpperCase()}&${enc(url)}&${enc(norm)}`;
-  const key = `${enc(process.env.FS_CONSUMER_SECRET)}&${enc(tokenSecret)}`;
+  const key = `${enc(clean(process.env.FS_CONSUMER_SECRET))}&${enc(clean(tokenSecret))}`;
   all.oauth_signature = crypto.createHmac('sha1', key).update(base).digest('base64');
   return all;
 }
 
 async function creds() {
-  const token = (await getSetting('fs_token')) || process.env.FS_ACCESS_TOKEN;
-  const secret = (await getSetting('fs_secret')) || process.env.FS_ACCESS_SECRET;
+  const token = clean(process.env.FS_ACCESS_TOKEN) || clean(await getSetting('fs_token'));
+  const secret = clean(process.env.FS_ACCESS_SECRET) || clean(await getSetting('fs_secret'));
   if (!token || !secret) throw Object.assign(new Error('FatSecret is not connected'), { code: 'not_connected' });
   return { token, secret };
 }
