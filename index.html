@@ -783,7 +783,7 @@ async function intRefresh(){
 function chipTap(k){
   const st=(integ[k]||{}).status;
   if(st==='connected'){ const e=(integ[k]||{}).lastError; showToast(e ? SRC_NAME[k]+': '+e : SRC_NAME[k]+' is connected'); return; }
-  window.location.href = k==='google' ? '/api/google-health/auth' : '/api/fatsecret/auth';
+  window.location.href = '/api/connect?provider='+k;
 }
 const _pulled = new Set();
 function maybePull(date){

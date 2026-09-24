@@ -46,11 +46,43 @@
       "schedule": "30 5 * * *"
     },
     {
-      "path": "/api/google-health/sync-today",
+      "path": "/api/auto-sync-evening",
       "schedule": "30 20 * * *"
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/google-health/auth",
+      "destination": "/api/connect?provider=google&step=start"
+    },
+    {
+      "source": "/api/google-health/callback",
+      "destination": "/api/connect?provider=google&step=callback"
+    },
+    {
+      "source": "/api/fatsecret/auth",
+      "destination": "/api/connect?provider=fatsecret&step=start"
+    },
+    {
+      "source": "/api/fatsecret/callback",
+      "destination": "/api/connect?provider=fatsecret&step=callback"
+    },
+    {
+      "source": "/api/google-health/register",
+      "destination": "/api/integrations?view=register"
+    },
+    {
+      "source": "/api/google-health/status",
+      "destination": "/api/integrations"
+    },
+    {
+      "source": "/api/google-health/sync",
+      "destination": "/api/auto-sync"
+    },
+    {
+      "source": "/api/google-health/sync-today",
+      "destination": "/api/auto-sync"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"
