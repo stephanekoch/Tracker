@@ -160,7 +160,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v71</span></div>
+        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v72</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -197,17 +197,14 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           <div><div class="tgl-lbl">Gym session</div></div>
         </div>
         <div class="divider"></div>
-        <div class="field">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;">
-            <div class="field-lbl" style="margin:0;">Vitality</div>
-            <div style="font-size:13px;color:var(--muted);"><b id="vit-num" style="color:var(--accent);font-size:19px;">0</b> / 8</div>
+        <div id="gh-strip" class="field" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="min-width:0">
+            <div class="field-lbl" style="margin:0 0 2px">Google Health</div>
+            <div id="gh-status" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Checking…</div>
           </div>
-          <div style="height:9px;border-radius:5px;background:#f0f0f0;overflow:hidden;">
-            <div id="vit-bar" style="width:0%;height:100%;background:var(--accent);transition:width .3s;"></div>
-          </div>
-          <div id="vit-why" style="font-size:12px;color:var(--muted);margin-top:6px;">Add steps or a gym session</div>
+          <button id="gh-btn" class="goal-btn" style="padding:6px 12px;font-size:11px;text-transform:none;letter-spacing:0;white-space:nowrap;flex-shrink:0" onclick="ghAction()">…</button>
         </div>
-        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="markDirty();fmtSteps(this);refreshVitality();updateProgress()"/></div>
+        <div class="field"><div class="field-lbl">Steps</div><input type="text" inputmode="numeric" id="steps" placeholder="0" oninput="markDirty();fmtSteps(this);updateProgress()"/></div>
         <div class="field"><div class="field-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>Bodyweight (kg)</span><button class="goal-btn" style="padding:3px 10px;font-size:11px;text-transform:none;letter-spacing:0;" onclick="openGoalModal()" id="log-goal-btn">+ Goal</button></div><input type="number" step="0.1" id="bodyweight" placeholder="0.0" oninput="markDirty();updateProgress()"/><div id="bw-target-hint"></div></div>
         <div class="field"><div class="field-lbl">Calories (kcal)</div><input type="number" id="calories" placeholder="0" oninput="markDirty();updateProgress()"/><div id="cal-target-hint"></div></div>
         <div class="field">
@@ -369,7 +366,6 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <p>A perfect week requires all of the following:</p>
       <ul style="margin:0 0 16px 0;padding-left:18px;font-size:13px;color:#cc4a2e;line-height:2;font-family:'Inter',sans-serif;">
         <li>At least <strong>3 gym sessions</strong></li>
-        <li><strong>40 vitality points</strong> total</li>
         <li>Average <strong>10,000+ steps</strong> per day</li>
         <li><strong>7 HackChinese</strong> sessions</li>
         <li><strong>7 DuChinese</strong> sessions</li>
@@ -387,7 +383,7 @@ const API = '/api/sheets';
 let entries = [], toggles = {gym:false,hackChinese:false,duChinese:false,yoyoChinese:false};
 let mood = '';
 let dashSection = 'health';
-let vit = 0, pendingSave = null, rangeDays = 91, studyFilter = {hackChinese:true,duChinese:false,yoyoChinese:false}, chartsBuilt = false;
+let pendingSave = null, rangeDays = 91, studyFilter = {hackChinese:true,duChinese:false,yoyoChinese:false}, chartsBuilt = false;
 
 // Favicon
 (function(){
@@ -441,8 +437,7 @@ function isComplete(e){
 }
 
 function countProgress(){
-  // Gym is excluded (not every day is a gym day) and vitality is derived from
-  // gym + steps, so counting it would double-count steps. Mood only counts for
+  // Gym is excluded (not every day is a gym day). Mood only counts for
   // dates from MOOD_REQUIRED_FROM onwards — see isComplete.
   const d = document.getElementById('entry-date').value || todayStr();
   const moodCounts = d >= MOOD_REQUIRED_FROM;
@@ -495,43 +490,9 @@ function tgl(key){
   document.getElementById('track-'+key).style.background=toggles[key]?'#e85d40':'#eeeeee';
   document.getElementById('thumb-'+key).style.left=toggles[key]?'23px':'3px';
   if(key==='hackChinese') document.getElementById('words-wrap').classList.toggle('hidden',!toggles[key]);
-  if(key==='gym') refreshVitality();
   updateProgress();
 }
 function setTgl(key,val){ toggles[key]=!!val; document.getElementById('track-'+key).style.background=val?'#e85d40':'#eeeeee'; document.getElementById('thumb-'+key).style.left=val?'23px':'3px'; }
-// Vitality is derived, not entered. Gym earns the full 8; steps earn a band.
-// Where both apply the higher wins — 8 is the ceiling either way.
-function stepsBand(n){
-  if(!isFinite(n) || n < 7500)  return 0;
-  if(n < 10000)  return 3;
-  if(n < 12500)  return 5;
-  return 8;
-}
-function computeVitality(){
-  const raw = (document.getElementById('steps').value||'').replace(/,/g,'');
-  const n = parseInt(raw);
-  const fromSteps = stepsBand(n);
-  const fromGym = toggles.gym ? 8 : 0;
-  const score = Math.max(fromSteps, fromGym);
-  let why;
-  if(!toggles.gym && !isFinite(n)) why = 'Add steps or a gym session';
-  else {
-    const bits=[];
-    if(toggles.gym) bits.push('Gym session');
-    if(isFinite(n)) bits.push(n.toLocaleString()+' steps');
-    why = bits.join(' · ') + (fromGym > fromSteps && isFinite(n) ? '' : '');
-  }
-  return { score, why };
-}
-function refreshVitality(){
-  const {score, why} = computeVitality();
-  vit = score;
-  const bar=document.getElementById('vit-bar'), num=document.getElementById('vit-num'), w=document.getElementById('vit-why');
-  if(bar) bar.style.width=(score/8*100)+'%';
-  if(num) num.textContent=score;
-  if(w) w.textContent=why;
-}
-
 function refreshMoodOptional(){
   const el=document.getElementById('mood-optional');
   if(!el) return;
@@ -557,10 +518,9 @@ function clearDirty(){ formDirty = false; }
 function formIsDirty(){ return formDirty; }
 
 function readForm(){
-  refreshVitality();   // never trust stale state at save time
   const stepsRaw = document.getElementById('steps').value.replace(/,/g,'');
   const sleep = (document.getElementById('sleep-txt').value||'').trim();
-  return { date:document.getElementById('entry-date').value, gym:toggles.gym, mood:mood, vitalityPoints:vit,
+  return { date:document.getElementById('entry-date').value, gym:toggles.gym, mood:mood, 
     steps:stepsRaw, bodyweight:document.getElementById('bodyweight').value, calories:document.getElementById('calories').value,
     sleep, hackChinese:toggles.hackChinese, hackChineseWords:document.getElementById('hackChineseWords').value,
     duChinese:toggles.duChinese, yoyoChinese:toggles.yoyoChinese };
@@ -588,12 +548,11 @@ function fillForm(e){
     if(!isNaN(sh)&&!isNaN(sm)) sleepVal=sh+':'+(sm<10?'0'+sm:String(sm));
   }
   document.getElementById('sleep-txt').value = sleepVal;
-  refreshVitality();
   refreshMoodOptional();
   updateTargetHints();
 }
 function blankForm(date){
-  fillForm({date,gym:false,mood:'',vitalityPoints:0,steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
+  fillForm({date,gym:false,mood:'',steps:'',bodyweight:'',calories:'',sleep:'',hackChinese:false,hackChineseWords:'',duChinese:false,yoyoChinese:false});
 }
 function onDateChange(){
   clearDirty();
@@ -630,9 +589,13 @@ function doSave(form){
     })
     .catch(()=>{ btn.textContent='Error — retry'; btn.classList.add('error'); btn.disabled=false; });
 }
-function showToast(){
-  const t=document.getElementById('toast'); t.classList.remove('hidden');
-  setTimeout(()=>t.classList.add('hidden'),2000);
+function showToast(msg){
+  const t=document.getElementById('toast'); if(!t) return;
+  const inner=t.querySelector('.toast-inner')||t;
+  if(!inner.dataset.orig) inner.dataset.orig=inner.textContent;
+  inner.textContent = msg || inner.dataset.orig;
+  t.classList.remove('hidden'); clearTimeout(t._h);
+  t._h=setTimeout(()=>t.classList.add('hidden'),2200);
 }
 
 // Tabs
@@ -1052,9 +1015,6 @@ function renderCharts(){
     const ca=weeklyAvgData(filtered,'calories',parseInt);
     html+=buildChart('Weekly calories',ca.labels,ca.data,'#e85d40','#,##0','#,##0',1000,3000);
 
-    // ── Vitality — derived from gym + steps, so it belongs with Health ──
-    const vi=weeklySumData(filtered,'vitalityPoints',parseInt,40);
-    html+=buildChart('Weekly vitality points',vi.labels,vi.data,'#e85d40','#,##0','#,##0',12,40);
 
     // ── Sleep ──
     const sleepEntries=filtered.filter(e=>{
@@ -1157,9 +1117,6 @@ function computePerfectWeeks(){
     // 1) At least 3 gym sessions
     const gymSessions=days.filter(e=>e.gym).length;
     if(gymSessions<3) return;
-    // 2) Total vitality points >= 40
-    const totalVit=days.reduce((a,e)=>a+(parseInt(e.vitalityPoints)||0),0);
-    if(totalVit<40) return;
     // 3) Average steps >= 10,000
     const stepsVals=days.map(e=>parseInt(e.steps)||0).filter(v=>v>0);
     if(!stepsVals.length) return;
@@ -1219,12 +1176,11 @@ function renderHistory(){
     const meta=metaParts.join(' · ')||'No metrics logged';
     const badge=isComplete(e)?'<span class="hist-badge">✓</span>':'';
     const rowClass=isComplete(e)?'hist-row complete':'hist-row partial';
-    // Health row: gym + mood + vitality
+    // Health row: gym + mood
     let healthIcons='';
     if(e.gym) healthIcons+='<span style="font-size:17px;line-height:1">🏋️</span>';
     const moodCol={good:'#4a9e6a',normal:'#5b8def',bad:'#e85d40'}[(e.mood||'').toLowerCase()];
     if(moodCol) healthIcons+='<span title="Mood: '+e.mood+'" style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+moodCol+';"></span>';
-    if(e.vitalityPoints>0) healthIcons+='<span style="display:inline-flex;min-width:20px;height:20px;padding:0 3px;border-radius:50%;background:white;border:1.5px solid #eeeeee;color:#e85d40;font-size:11px;align-items:center;justify-content:center;font-weight:700">'+e.vitalityPoints+'</span>';
     // Chinese row
     let chineseIcons='';
     if(e.hackChinese) chineseIcons+=`<img style="width:20px;height:20px;border-radius:50%" src="${ICONS.hackChinese}"/>`;
@@ -1654,14 +1610,14 @@ function showDiag(){
   const L=[];
   const row=(k,v)=>L.push('<div><b style="color:#1a1a1a">'+k+':</b> '+v+'</div>');
   const bw=entries.filter(e=>e.bodyweight);
-  row("version","v71");
+  row("version","v72");
   row('last load error', window.__lastLoadError || 'none');
   row('script version', window.__scriptVersion || '<span style="color:#c0392b">unknown — old Apps Script</span>');
   const _c=readCache(); row('cache', _c ? _c.rows.length+' rows, saved '+new Date(_c.at).toLocaleTimeString() : 'empty');
   const ps = (typeof Notification==='undefined') ? 'not supported'
     : (Notification.permission==='granted' ? (window.__pushState||'on') : Notification.permission);
   row('reminders', ps === 'on' || ps === 'granted'
-    ? '<span style="color:#4a9e6a">on — 9pm daily</span>'
+    ? '<span style="color:#4a9e6a">on — 7pm daily</span>'
     : '<span style="color:#c0392b">'+ps+'</span> <button onclick="enableRemindersManually()" '
       +'style="margin-left:6px;border:1px solid #e85d40;background:transparent;color:#e85d40;'
       +'border-radius:6px;padding:2px 8px;font-family:Inter,sans-serif;font-size:11px;cursor:pointer;">Enable</button>');
@@ -1775,6 +1731,59 @@ async function enableRemindersManually(){
 
 
 
+/* ══ Google Health sync ═══════════════════════════════════
+   Nightly cron pulls steps / sleep / weight / calories / gym from the
+   Google Health API. This strip shows the link state and offers a manual
+   pull for the date currently selected in the form. */
+let ghState = { status:'unknown' };
+function ghRender(){
+  const st=document.getElementById('gh-status'), btn=document.getElementById('gh-btn');
+  if(!st||!btn) return;
+  const s=ghState.status;
+  if(!ghState.configured){ st.textContent='Not set up yet'; btn.textContent='Set up'; btn.disabled=true; return; }
+  btn.disabled=false;
+  if(s==='connected'){
+    const t=ghState.lastSync? new Date(ghState.lastSync) : null;
+    st.textContent = t ? 'Synced '+t.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : 'Connected · not synced yet';
+    st.style.color='var(--muted)'; btn.textContent='Sync now';
+  } else if(s==='reconnect'){
+    st.textContent='Link expired — reconnect'; st.style.color='#c0392b'; btn.textContent='Reconnect';
+  } else if(s==='syncing'){
+    st.textContent='Syncing…'; st.style.color='var(--muted)'; btn.textContent='…'; btn.disabled=true;
+  } else {
+    st.textContent='Not connected'; st.style.color='var(--muted)'; btn.textContent='Connect';
+  }
+}
+async function ghRefresh(){
+  try{ const r=await fetch('/api/google-health/status',{cache:'no-store'}); ghState=await r.json(); }
+  catch(e){ ghState={status:'unknown',configured:true}; }
+  ghRender();
+}
+async function ghAction(){
+  if(ghState.status!=='connected'){ window.location.href='/api/google-health/auth'; return; }
+  const date=document.getElementById('entry-date').value||todayStr();
+  ghState.status='syncing'; ghRender();
+  try{
+    const r=await fetch('/api/google-health/sync?date='+date,{cache:'no-store'});
+    const d=await r.json();
+    if(!d.ok){ throw new Error(d.error||d.code||'sync failed'); }
+    // Refresh this row from Supabase and repaint the form
+    const rr=await fetch(API+'?action=getRow&date='+date,{cache:'no-store'});
+    const row=await rr.json();
+    if(row && row.date){
+      const idx=entries.findIndex(e=>e.date===row.date);
+      if(idx>=0) entries[idx]={...entries[idx],...row}; else entries.push(row);
+      entries.sort((a,b)=>a.date.localeCompare(b.date));
+      writeCache(entries, goal);
+      fillForm(entries.find(e=>e.date===date));
+      renderDashboard(); renderHistory();
+    }
+    const got=Object.keys(d.synced||{}).filter(k=>k!=='gym'||d.synced.gym);
+    showToast(got.length ? 'Pulled '+got.join(', ')+' from Google Health' : 'Nothing new from Google Health for '+date);
+  }catch(e){ alert('Google Health sync failed: '+(e.message||e)); }
+  await ghRefresh();
+}
+
 // Init — render from the local cache first, then refresh in the background.
 // Apps Script cold-starts take seconds and sometimes fail outright; caching
 // means the app is usable immediately and a slow request stops mattering.
@@ -1797,6 +1806,7 @@ function writeCache(rows, goalObj){
 }
 
 function applyData(rows, goalObj, fromCache){
+  if(!window.__ghInit){ window.__ghInit=true; ghRefresh(); }
   entries = rows || [];
   if(goalObj !== undefined){
     goal = goalObj || null;
