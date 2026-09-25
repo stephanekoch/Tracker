@@ -43,8 +43,35 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .ptr-spin{position:absolute;left:50%;top:-44px;width:36px;height:36px;margin-left:-18px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.14);color:#e85d40;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;}
 .ptr-spin.spinning svg{animation:ptrspin .8s linear infinite;}
 @keyframes ptrspin{to{transform:rotate(360deg)}}
-.src-refresh{order:3;margin-left:10px;flex-shrink:0;height:32px;padding:0 12px;gap:6px;border-radius:16px;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;color:#3a3a3a!important;text-transform:none;letter-spacing:0;border:1px solid var(--border);background:#fafafa;color:#6f6f6f;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+.src-refresh{order:3;margin-left:10px;flex-shrink:0;height:36px;padding:0 14px;gap:7px;border-radius:18px;font-family:'Inter',sans-serif;font-size:13.5px;font-weight:700;color:#b8412a!important;background:#fff4f0!important;border:1.5px solid #e85d40!important;text-transform:none;letter-spacing:0;transition:background .2s,border-color .2s,color .2s;border:1px solid var(--border);background:#fafafa;color:#6f6f6f;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
 .src-refresh.spinning svg{animation:ptrspin .8s linear infinite;}
+.src-refresh.done{color:#1f6e41!important;background:#eef8f2!important;border-color:#2e9459!important;}
+.save-btn.saved{background:#2e9459!important;}
+.row-flash{animation:rowflash 1.2s ease-out;}
+@keyframes rowflash{0%{background:#eef8f2}100%{background:transparent}}
+.celebrate{position:fixed;inset:0;z-index:400;background:rgba(250,250,250,.9);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;animation:celveil .35s ease-out both;cursor:pointer;}
+.celebrate.hidden{display:none;}
+.celebrate.out{animation:celout .35s ease-in forwards;}
+@keyframes celveil{from{opacity:0}to{opacity:1}}
+@keyframes celout{to{opacity:0}}
+.cel-ring{stroke-dasharray:377;stroke-dashoffset:377;animation:celring 1.1s .15s cubic-bezier(.55,0,.25,1) forwards,celgreen .01s 1.25s forwards;}
+@keyframes celring{to{stroke-dashoffset:0}}
+@keyframes celgreen{to{stroke:#2e9459}}
+.cel-check{stroke-dasharray:60;stroke-dashoffset:60;animation:celdraw .45s 1.25s ease-out forwards;}
+@keyframes celdraw{to{stroke-dashoffset:0}}
+.cel-spark{stroke:#2e9459;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:14 40;opacity:0;animation:celspark .9s 1.2s ease-out forwards;}
+@keyframes celspark{0%{opacity:0;stroke-dashoffset:0}20%{opacity:1}100%{opacity:0;stroke-dashoffset:-28}}
+@media (prefers-reduced-motion: reduce){.cel-ring,.cel-check,.cel-spark{animation-duration:.01s!important;animation-delay:0s!important}}
+.src-pop{position:fixed;z-index:300;width:240px;max-width:calc(100vw - 24px);box-sizing:border-box;background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:12px 14px;box-shadow:0 10px 28px rgba(0,0,0,.12);animation:srcpop .16s ease-out both;font-family:'Inter',sans-serif;}
+.src-pop.hidden,.src-pop-scrim.hidden{display:none;}
+@keyframes srcpop{from{opacity:0;transform:translateY(-4px) scale(.97)}to{opacity:1;transform:none}}
+.src-pop-arrow{position:absolute;top:-6px;width:10px;height:10px;background:#fff;border-left:1px solid #e8e8e8;border-top:1px solid #e8e8e8;transform:rotate(45deg);}
+.src-pop-scrim{position:fixed;inset:0;z-index:299;}
+.src-pop h4{margin:0;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#1a1a1a;}
+.src-pop h4.bad{color:#b8412a;}
+.src-pop h4 i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.src-pop p{margin:4px 0 0;font-size:12.5px;line-height:1.5;color:#6f6f6f;}
+.src-pop .pop-btn{display:inline-flex;align-items:center;justify-content:center;margin-top:10px;height:38px;padding:0 16px;border-radius:10px;background:#c24a2e;color:#fff;font-size:13.5px;font-weight:700;text-decoration:none;border:0;cursor:pointer;font-family:'Inter',sans-serif;}
 .src-chips{display:flex;gap:8px;margin:2px 0 6px;flex-wrap:wrap;}
 .src-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:#fafafa;border-radius:20px;padding:5px 11px;font-family:'Inter',sans-serif;font-size:12px;color:#555;cursor:pointer;}
 .src-chip i{width:8px;height:8px;border-radius:50%;background:#cccccc;display:inline-block;}
@@ -226,7 +253,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub">Health &amp; Chinese <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v76</span></div>
+        <div class="app-sub"><span id="app-sub-normal">Health &amp; Chinese</span><span id="app-sub-done" style="display:none;color:#1f6e41;font-weight:700;">Day complete</span> <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v77</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -234,12 +261,13 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           <div style="font-size:19px;font-weight:600;color:var(--accent);" id="hdr-streak-n">0</div>
           <div style="font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;">streak</div>
         </div>
-        <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40">
+        <svg id="progress-ring" width="40" height="40" viewBox="0 0 40 40" onclick="if(_wasComplete) startCelebration()" style="cursor:pointer">
           <circle cx="20" cy="20" r="16" fill="none" stroke="#eeeeee" stroke-width="3.5"/>
           <circle id="ring-fill" cx="20" cy="20" r="16" fill="none" stroke="#e85d40" stroke-width="3.5"
             stroke-dasharray="100.5" stroke-dashoffset="100.5"
             stroke-linecap="round" transform="rotate(-90 20 20)" style="transition:stroke-dashoffset .4s,stroke .4s;"/>
           <text id="ring-text" x="20" y="24" text-anchor="middle" font-size="11" fill="#e85d40" font-weight="600" font-family="Inter,sans-serif">0/9</text>
+          <path id="ring-check" d="M14 20.5 18.2 24.5 26.5 15.8" fill="none" stroke="#2e9459" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"/>
         </svg>
       </div>
     </div>
@@ -419,6 +447,16 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
     </div>
   </div>
   <div class="toast hidden" id="toast"><div class="toast-inner">✓ Entry saved!</div></div>
+  <div id="celebrate" class="celebrate hidden" onclick="endCelebration()" role="img" aria-label="Day complete">
+    <svg viewBox="-10 -10 160 160" width="160" height="160" aria-hidden="true" style="overflow:visible">
+      <circle cx="70" cy="70" r="60" fill="none" stroke="#ececec" stroke-width="7"/>
+      <circle class="cel-ring" cx="70" cy="70" r="60" fill="none" stroke="#e85d40" stroke-width="7" stroke-linecap="round" transform="rotate(-90 70 70)"/>
+      <path class="cel-check" d="M48 72 63 87 94 54" fill="none" stroke="#2e9459" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(0 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(30 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(60 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(90 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(120 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(150 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(180 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(210 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(240 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(270 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(300 70 70)"/><line class="cel-spark" x1="70" y1="6" x2="70" y2="-8" transform="rotate(330 70 70)"/>
+    </svg>
+  </div>
+  <div id="src-pop" class="src-pop hidden" role="dialog" aria-modal="false"><div class="src-pop-arrow" id="src-pop-arrow"></div><div id="src-pop-body"></div></div>
+  <div id="src-pop-scrim" class="src-pop-scrim hidden" onclick="closePop()"></div>
 
   <div class="overlay hidden" id="status-modal">
     <div class="modal modal-wide">
@@ -567,6 +605,20 @@ function countProgress(){
 }
 
 let _wasComplete = false;
+function celebratedToday(){ try{ return localStorage.getItem('celebrated:'+todayStr())==='1'; }catch(e){ return false; } }
+function startCelebration(){
+  try{ localStorage.setItem('celebrated:'+todayStr(),'1'); }catch(e){}
+  const c=document.getElementById('celebrate'); if(!c) return;
+  c.classList.remove('hidden','out'); void c.offsetWidth;
+  // restart the SVG animations
+  c.querySelectorAll('.cel-ring,.cel-check,.cel-spark').forEach(el=>{ el.style.animation='none'; void el.getBoundingClientRect(); el.style.animation=''; });
+  clearTimeout(window.__celT); window.__celT=setTimeout(endCelebration, 2600);
+}
+function endCelebration(){
+  const c=document.getElementById('celebrate'); if(!c||c.classList.contains('hidden')) return;
+  clearTimeout(window.__celT); c.classList.add('out');
+  setTimeout(()=>{ c.classList.add('hidden'); c.classList.remove('out'); }, 350);
+}
 function updateProgress(){
   const {filled, total} = countProgress();
   const complete = filled === total;
@@ -581,10 +633,16 @@ function updateProgress(){
   }
   if(ringText){
     ringText.textContent = filled+'/'+total;
-    ringText.style.fill = complete ? '#4a9e6a' : '#e85d40';
+    ringText.style.fill = complete ? '#2e9459' : '#e85d40';
+    ringText.style.display = complete ? 'none' : '';
   }
-  // Fire confetti only once when first reaching complete
-  if(complete && !_wasComplete) launchConfetti();
+  if(ringFill && complete) ringFill.style.stroke = '#2e9459';
+  const rc=document.getElementById('ring-check'); if(rc) rc.style.display = complete ? '' : 'none';
+  const sn=document.getElementById('app-sub-normal'), sd=document.getElementById('app-sub-done');
+  if(sn&&sd){ sn.style.display = complete ? 'none' : ''; sd.style.display = complete ? '' : 'none'; }
+  // Celebrate once per day: only for today, only the first time it reaches complete
+  const d=document.getElementById('entry-date').value||todayStr();
+  if(complete && !_wasComplete && d===todayStr() && !celebratedToday()) startCelebration();
   _wasComplete = complete;
 }
 function setDot(){}   // status dot removed from the header
@@ -754,11 +812,11 @@ async function saveEditor(){
     const patch={date, manualFields:[...manualSet]}; patch[field]=val;
     if(idx>=0) entries[idx]={...entries[idx],...patch}; else { entries.push({...patch, autoValues:{}}); entries.sort((a,b)=>a.date.localeCompare(b.date)); }
     writeCache(entries, goal); renderDashboard(); renderHistory();
-    showToast(AUTO_LABEL[k]+' saved');
+    const rw=document.getElementById('row-'+k); if(rw){ rw.classList.remove('row-flash'); void rw.offsetWidth; rw.classList.add('row-flash'); }
   }catch(e){ alert('Could not save '+AUTO_LABEL[k]+': '+(e.message||e)); }
   btn.disabled=false;
 }
-function aeUseSynced(){ const k=aeKey; if(!k) return; closeEditor(); resetField(k); showToast(AUTO_LABEL[k]+' is automatic again'); }
+function aeUseSynced(){ const k=aeKey; if(!k) return; closeEditor(); resetField(k).then(()=>{ const rw=document.getElementById('row-'+k); if(rw){ rw.classList.remove('row-flash'); void rw.offsetWidth; rw.classList.add('row-flash'); } }); }
 function editField(k){ openEditor(k); }
 function gymTap(){ openEditor('gym'); }
 async function resetField(k){
@@ -807,11 +865,29 @@ async function intRefresh(){
   renderAuto();
 }
 function chipTap(k){
-  const st=(integ[k]||{}).status;
-  if(st==='connected'){ showToast(SRC_NAME[k]+' is connected'); return; }
-  if(st==='error'){ const e=(integ[k]||{}).lastError; if(!confirm(SRC_NAME[k]+' isn\u2019t working'+(e?': '+e:'')+'\n\nReconnect now?')) return; }
-  window.location.href = '/api/connect?provider='+k;
+  const pop=document.getElementById('src-pop');
+  if(!pop.classList.contains('hidden') && pop.dataset.src===k){ closePop(); return; }
+  const st=(integ[k]||{}).status, name=SRC_NAME[k];
+  const t=(integ[k]||{}).lastSync ? new Date(integ[k].lastSync).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+  const what = k==='google' ? 'Steps, sleep, weight and workouts arrive automatically.' : 'Calories from your FatSecret diary arrive automatically.';
+  const WARN='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+  let html;
+  if(st==='connected') html='<h4><i style="background:'+SRC_COLOR[k]+'"></i>'+name+'</h4><p>Connected'+(t?' · last update '+t:'')+'<br>'+what+'</p>';
+  else if(st==='reconnect'||st==='error') html='<h4 class="bad">'+WARN+name+' link expired</h4><p>'+(k==='google'?'Steps, sleep and weight':'Calories')+' won\u2019t update until you reconnect.</p><a class="pop-btn" href="/api/connect?provider='+k+'">Reconnect</a>';
+  else html='<h4><i style="background:'+SRC_COLOR[k]+'"></i>'+name+'</h4><p>Not connected yet. '+what+'</p><a class="pop-btn" href="/api/connect?provider='+k+'">Connect</a>';
+  document.getElementById('src-pop-body').innerHTML=html;
+  pop.dataset.src=k;
+  pop.classList.remove('hidden'); document.getElementById('src-pop-scrim').classList.remove('hidden');
+  // Place it under the chip, kept inside the screen
+  const r=document.getElementById('chip-'+k).getBoundingClientRect();
+  const w=pop.offsetWidth, vw=window.innerWidth, m=12;
+  let left=Math.min(Math.max(r.left, m), vw-w-m);
+  pop.style.left=left+'px'; pop.style.top=(r.bottom+8)+'px';
+  const arrowX=Math.min(Math.max(r.left+r.width/2-left-5, 14), w-24);
+  document.getElementById('src-pop-arrow').style.left=arrowX+'px';
 }
+function closePop(){ document.getElementById('src-pop').classList.add('hidden'); document.getElementById('src-pop-scrim').classList.add('hidden'); }
+document.addEventListener('scroll', closePop, true);
 const _pulled = new Set();
 function maybePull(date){
   // When looking at a recent day with gaps, ask the providers once per session
@@ -898,19 +974,12 @@ function doSave(form){
       }
       const idx=entries.findIndex(e=>e.date===form.date);
       if(idx>=0) entries[idx]={...entries[idx],...form}; else { entries.push(form); entries.sort((a,b)=>a.date.localeCompare(b.date)); }
-      btn.textContent='Save'; btn.disabled=false; setDot('#4a9e6a','Saved');
-      showToast(); switchTab('history');
+      btn.textContent='\u2713 Saved'; btn.classList.add('saved'); setDot('#4a9e6a','Saved');
+      setTimeout(()=>{ btn.textContent='Save'; btn.classList.remove('saved'); btn.disabled=false; switchTab('history'); }, 900);
     })
     .catch(()=>{ btn.textContent='Error — retry'; btn.classList.add('error'); btn.disabled=false; });
 }
-function showToast(msg){
-  const t=document.getElementById('toast'); if(!t) return;
-  const inner=t.querySelector('.toast-inner')||t;
-  if(!inner.dataset.orig) inner.dataset.orig=inner.textContent;
-  inner.textContent = msg || inner.dataset.orig;
-  t.classList.remove('hidden'); clearTimeout(t._h);
-  t._h=setTimeout(()=>t.classList.add('hidden'),2200);
-}
+function showToast(){ /* centred messages retired in v77 — feedback happens in place */ }
 
 // Tabs
 function switchTab(name){
@@ -2193,17 +2262,27 @@ async function refreshAll(opts){
   refreshing=true; lastRefresh=Date.now();
   const bar=document.getElementById('refresh-bar'), btn=document.getElementById('btn-refresh');
   bar.classList.add('on'); if(btn) btn.classList.add('spinning');
+  let doneLabel='';
   const lbl=document.getElementById('btn-refresh-lbl'); if(lbl) lbl.textContent='Syncing\u2026';
+  if(btn){ clearTimeout(window.__syncDoneT); btn.classList.remove('done'); const sv=btn.querySelector('svg'); if(sv&&btn.dataset.icon) sv.outerHTML=btn.dataset.icon; }
   try{
     // Ask Google Health + FatSecret for today's numbers first, then reload everything
     await fetch('/api/auto-sync?light=1'+(opts.force?'&force=1':''),{cache:'no-store'}).catch(()=>{});
     if(opts.force) clearDirty();   // a deliberate refresh wins over an unsaved tap
     await loadData();
     await intRefresh();
-    if(opts.force) showToast('Up to date');
+    if(opts.force && btn){
+      const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      btn.classList.add('done');
+      btn.dataset.icon = btn.dataset.icon || btn.querySelector('svg').outerHTML;
+      btn.querySelector('svg').outerHTML='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7.5"/></svg>';
+      doneLabel='Synced '+t;
+      clearTimeout(window.__syncDoneT);
+      window.__syncDoneT=setTimeout(()=>{ btn.classList.remove('done'); const sv=btn.querySelector('svg'); if(sv&&btn.dataset.icon) sv.outerHTML=btn.dataset.icon; const l=document.getElementById('btn-refresh-lbl'); if(l) l.textContent='Sync'; }, 2200);
+    }
   } finally {
     refreshing=false; bar.classList.remove('on'); if(btn) btn.classList.remove('spinning');
-    if(lbl) lbl.textContent='Sync';
+    if(lbl) lbl.textContent= doneLabel || 'Sync';
     ptrReset();
   }
 }
