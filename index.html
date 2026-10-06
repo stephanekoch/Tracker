@@ -168,6 +168,26 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 .range-sel{display:flex;gap:4px;margin-bottom:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;}
 .range-btn{flex:1;padding:9px 2px;border:none;border-radius:7px;background:transparent;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap;text-align:center;}
 .range-btn.active{background:var(--accent);color:white;font-weight:700;}
+.dash-back{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;height:44px;padding:0 12px 0 0;margin:-6px 0 4px;border:none;background:transparent;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;color:var(--accent);cursor:pointer;}
+#tab-dashboard{display:flex;flex-direction:column;}
+#tab-dashboard .range-sel{margin:0;}
+#charts-area{flex:1;display:flex;flex-direction:column;margin-bottom:10px;}
+#charts-area.detail .chart-card{flex:1;display:flex;flex-direction:column;margin-bottom:0;}
+#charts-area.detail .chart-card>svg{margin:auto 0;}
+.tile-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:10px;align-content:start;}
+.tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 12px 8px;text-align:left;display:flex;flex-direction:column;gap:3px;min-height:132px;max-height:210px;font-family:'Inter',sans-serif;color:var(--text);cursor:pointer;-webkit-appearance:none;}
+.tile:active{background:#fff5f3;}
+.tile-name{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);}
+.tile-name svg{color:#b0b0b0;flex-shrink:0;}
+.tile-val{font-size:24px;font-weight:700;line-height:1.15;}
+.tile-val small{font-size:13px;font-weight:500;color:#6f6f6f;}
+.tile-delta{font-size:12.5px;color:#6f6f6f;}
+.tile-spark{margin-top:auto;width:100%;height:auto;display:block;}
+.dash-stats{display:flex;gap:8px;margin-top:10px;}
+.dash-stat{flex:1;background:#f7f7f7;border-radius:10px;padding:8px 10px;min-width:0;}
+.dash-stat-l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6f6f6f;display:flex;align-items:center;gap:5px;}
+.dash-stat-l i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.dash-stat-v{font-size:17px;font-weight:700;margin-top:2px;white-space:nowrap;}
 .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 10px 10px;margin-bottom:10px;}
 .chart-ttl{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px;padding-left:4px;}
 .study-pills{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
@@ -256,7 +276,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub"><span id="app-sub-normal">Health &amp; Chinese</span><span id="app-sub-done" style="display:none;color:#1f6e41;font-weight:700;">Day complete</span> <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v79</span></div>
+        <div class="app-sub"><span id="app-sub-normal">Health &amp; Chinese</span><span id="app-sub-done" style="display:none;color:#1f6e41;font-weight:700;">Day complete</span> <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v80</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -411,13 +431,14 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
         <button class="sect-tab active" id="sect-health" onclick="setSection('health')">Health</button>
         <button class="sect-tab" id="sect-chinese" onclick="setSection('chinese')">Chinese</button>
       </div>
+      <button class="dash-back hidden" id="dash-back" onclick="closeChart()"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span id="dash-back-lbl">Health</span></button>
+      <div id="charts-area"></div>
       <div class="range-sel">
         <button class="range-btn" onclick="setRange(30,this)">1 month</button>
         <button class="range-btn active" onclick="setRange(91,this)">3 months</button>
         <button class="range-btn" onclick="setRange(182,this)">6 months</button>
         <button class="range-btn" onclick="setRange(365,this)">12 months</button>
       </div>
-      <div id="charts-area"></div>
     </div>
 
     <!-- HISTORY -->
@@ -535,7 +556,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 const API = '/api/sheets';
 let entries = [], toggles = {gym:false,hackChinese:false,duChinese:false,yoyoChinese:false};
 let mood = '';
-let dashSection = 'health';
+let dashSection = 'health', dashDetail = null, DASH_H = 300;
 let pendingSave = null, rangeDays = 91, studyFilter = {hackChinese:true,duChinese:false,yoyoChinese:false}, chartsBuilt = false;
 
 // Favicon
@@ -1081,7 +1102,7 @@ function weeklyStudyCalc(filtered){
 function makeSVG(labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxisMax, opts){
   opts = opts || {};
   const tgt = opts.targetData || null;
-  const W=500, H=300, PL=60, PR=10, PT=18, PB=32;
+  const W=500, H=DASH_H, PL=60, PR=10, PT=18, PB=32;
   const iW=W-PL-PR, iH=H-PT-PB;
   const nums=data.map(v=>{if(v===null||v===undefined||v==='') return null; const n=Number(v); return isNaN(n)?null:n;});
   const valid=nums.filter(v=>v!==null);
@@ -1289,7 +1310,7 @@ function buildMoodChart(filtered){
       +'<svg viewBox="0 0 500 300" style="width:100%;height:auto;display:block"><text x="250" y="150" text-anchor="middle" '
       +'fill="#bbbbbb" font-size="18" font-family="Inter,sans-serif">No mood logged in this period</text></svg></div>';
   }
-  const W=500,H=300,PL=60,PR=10,PT=18,PB=32,iW=W-PL-PR,iH=H-PT-PB;
+  const W=500,H=DASH_H,PL=60,PR=10,PT=18,PB=32,iW=W-PL-PR,iH=H-PT-PB;
   const toX=i=>PL+(i/Math.max(ws.length-1,1))*iW;
   // Boundaries: b1 = top of good band, b2 = top of normal band (0..1 from bottom)
   const b1=ws.map((w,i)=>[toX(i), PT+iH-(w.good/w.n)*iH]);
@@ -1344,7 +1365,7 @@ function buildChart(title, labels, data, color, avgFmt, yAxisFmt, yAxisMin, yAxi
 
 function renderCharts(){
   const filtered=getFiltered();
-  let html='';
+  const cards=[];
 
   if(dashSection==='health'){
     // ── Bodyweight — daily. With a goal the axis runs forward to the deadline. ──
@@ -1401,10 +1422,10 @@ function renderCharts(){
         bwLegend='<span style="color:#c0392b;font-weight:600;">Target curve not drawn — '+why+'.</span>';
       }
     }
-    html+=buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70,null,
+    cards.push({id:'bodyweight',name:'Bodyweight',data:bwData,fmt:'0.0',unit:'kg',html:buildChart('Bodyweight',bwLabels,bwData,'#e85d40','0.0kg','0.0kg',58,70,null,
       {action:bwAction, titleExtra:statusPill, legend:bwLegend, targetData:bwTarget,
        markIndex: goalMarkIdx,
-       markLabel: goal ? 'Goal started '+fmtDate(goal.createdDate) : ''});
+       markLabel: goal ? 'Goal started '+fmtDate(goal.createdDate) : ''})});
 
     // ── Gym sessions — weekly count ──
     const gymWks={};
@@ -1414,15 +1435,15 @@ function renderCharts(){
       if(e.gym) gymWks[k].sum++;
     });
     const gymW=Object.values(gymWks);
-    html+=buildChart('Weekly gym sessions',gymW.map(w=>w.label),gymW.map(w=>w.sum),'#e85d40','0.0','0.0',0,4);
+    cards.push({id:'gym',name:'Gym sessions',data:gymW.map(w=>w.sum),fmt:'int',unit:'/wk',html:buildChart('Weekly gym sessions',gymW.map(w=>w.label),gymW.map(w=>w.sum),'#e85d40','0.0','0.0',0,4)});
 
     // ── Steps ──
     const st=weeklyAvgData(filtered,'steps',parseInt);
-    html+=buildChart('Weekly steps',st.labels,st.data,'#e85d40','#,##0','#,##0');
+    cards.push({id:'steps',name:'Steps',data:st.data,fmt:'#,##0',unit:'',html:buildChart('Weekly steps',st.labels,st.data,'#e85d40','#,##0','#,##0')});
 
     // ── Calories ──
     const ca=weeklyAvgData(filtered,'calories',parseInt);
-    html+=buildChart('Weekly calories',ca.labels,ca.data,'#e85d40','#,##0','#,##0',1000,3000);
+    cards.push({id:'calories',name:'Calories',data:ca.data,fmt:'#,##0',unit:'kcal',html:buildChart('Weekly calories',ca.labels,ca.data,'#e85d40','#,##0','#,##0',1000,3000)});
 
 
     // ── Sleep ──
@@ -1439,21 +1460,21 @@ function renderCharts(){
       sleepWks[k].sum+=hrs; sleepWks[k].count++;
     });
     const sleepW=Object.values(sleepWks);
-    html+=buildChart('Weekly sleep',
-      sleepW.length?sleepW.map(w=>w.label):[''],
-      sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null],
-      '#e85d40','sleep','sleep',5,9);
+    const sleepData=sleepW.length?sleepW.map(w=>w.count?parseFloat((w.sum/w.count).toFixed(2)):null):[null];
+    cards.push({id:'sleep',name:'Sleep',data:sleepData,fmt:'hm',unit:'',html:buildChart('Weekly sleep',
+      sleepW.length?sleepW.map(w=>w.label):[''], sleepData,
+      '#e85d40','sleep','sleep',5,9)});
 
     // ── Mood ──
-    html+=buildMoodChart(filtered);
+    cards.push({id:'mood',name:'Mood',mood:moodSummary(filtered),html:buildMoodChart(filtered)});
 
-    document.getElementById('charts-area').innerHTML=html;
+    paintDashboard(cards);
     return;
   }
 
   // ══ Chinese ══
   const wo=weeklyAvgData(filtered,'hackChineseWords',parseInt);
-  html+=buildChart('Weekly Chinese words known',wo.labels,wo.data,'#e85d40',null,'#,##0');
+  cards.push({id:'words',name:'Words known',data:wo.data,fmt:'#,##0',unit:'',html:buildChart('Weekly Chinese words known',wo.labels,wo.data,'#e85d40',null,'#,##0')});
 
   const pillsHTML=`<div class="study-pills">
     <button class="pill${studyFilter.hackChinese?' active':''}" onclick="toggleStudy('hackChinese')"><img src="${ICONS_SM.hackChinese}" style="width:13px;height:13px;border-radius:50%"/> HackChinese</button>
@@ -1461,10 +1482,94 @@ function renderCharts(){
     <button class="pill${studyFilter.yoyoChinese?' active':''}" onclick="toggleStudy('yoyoChinese')"><img src="${ICONS_SM.yoyoChinese}" style="width:13px;height:13px;border-radius:50%"/> Yoyo</button>
   </div>`;
   const sd=weeklyStudyCalc(filtered);
-  html+=buildChart('Weekly study activity',sd.labels,sd.data,'#e85d40','0.0','#,##0',0,7,pillsHTML);
+  cards.push({id:'study',name:'Study days',data:sd.data,fmt:'int',unit:'/wk',html:buildChart('Weekly study activity',sd.labels,sd.data,'#e85d40','0.0','#,##0',0,7,pillsHTML)});
 
-  document.getElementById('charts-area').innerHTML=html;
+  paintDashboard(cards);
 }
+
+/* ── Dashboard: overview tiles, tap one to open its chart full size ── */
+function dashFmt(v,fmt,avg){
+  if(v===null||v===undefined||isNaN(v)) return '\u2014';
+  if(fmt==='0.0') return Number(v).toFixed(1);
+  if(fmt==='hm'){ const m=Math.round(v*60); return Math.floor(m/60)+':'+String(m%60).padStart(2,'0'); }
+  if(fmt==='int') return avg ? Number(v).toFixed(1) : String(Math.round(v));
+  return Math.round(v).toLocaleString();
+}
+function dashNums(c){ return (c.data||[]).map(v=>(v===null||v===undefined||v==='')?null:Number(v)).filter(v=>v!==null&&!isNaN(v)); }
+function dashDiff(c,n){
+  if(n.length<2) return '';
+  const d=n[n.length-1]-n[0];
+  const mag=dashFmt(Math.abs(d),c.fmt,c.fmt==='int');
+  if(Math.abs(d)<1e-9 || /^0([.:]0+)?$/.test(mag)) return 'No change';
+  return (d>0?'+':'\u2212')+mag;
+}
+function moodSummary(filtered){
+  const t={good:0,normal:0,bad:0}, weeks={};
+  filtered.forEach(e=>{ const m=(e.mood||'').toLowerCase(); if(t[m]===undefined) return; t[m]++;
+    const k=getWeekKey(e.date); if(!weeks[k]) weeks[k]={g:0,n:0}; weeks[k].n++; if(m==='good') weeks[k].g++; });
+  const n=t.good+t.normal+t.bad, pct=x=>n?Math.round(x/n*100)+'%':'\u2014';
+  return { n, good:pct(t.good), normal:pct(t.normal), bad:pct(t.bad), series:Object.keys(weeks).sort().map(k=>weeks[k].g/weeks[k].n*100) };
+}
+function sparkSVG(vals){
+  const W=150,H=56;
+  if(vals.length<2) return '<svg class="tile-spark" viewBox="0 0 '+W+' '+H+'" aria-hidden="true"></svg>';
+  const lo=Math.min(...vals), hi=Math.max(...vals), sp=(hi-lo)||1;
+  const pts=vals.map((v,i)=>[3+i*(W-6)/(vals.length-1), (hi===lo?H/2:H-5-(v-lo)/sp*(H-10))]);
+  let d='M'+pts[0][0].toFixed(1)+' '+pts[0][1].toFixed(1);
+  for(let i=1;i<pts.length;i++){ const mx=((pts[i-1][0]+pts[i][0])/2).toFixed(1);
+    d+=' C'+mx+' '+pts[i-1][1].toFixed(1)+' '+mx+' '+pts[i][1].toFixed(1)+' '+pts[i][0].toFixed(1)+' '+pts[i][1].toFixed(1); }
+  return '<svg class="tile-spark" viewBox="0 0 '+W+' '+H+'" aria-hidden="true"><path d="'+d+'" fill="none" stroke="#e85d40" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function dashTile(c){
+  const CH='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  let val, delta, spark;
+  if(c.mood){ val=c.mood.good; delta=c.mood.n?'good days':'No mood logged'; spark=sparkSVG(c.mood.series); }
+  else { const n=dashNums(c); val=n.length?dashFmt(n[n.length-1],c.fmt)+(c.unit?' <small>'+c.unit+'</small>':''):'\u2014';
+    delta=n.length?(dashDiff(c,n)||'1 reading'):'No data yet'; spark=sparkSVG(n); }
+  return '<button class="tile" onclick="openChart(\''+c.id+'\')"><span class="tile-name">'+c.name+CH+'</span>'
+    +'<span class="tile-val">'+val+'</span><span class="tile-delta">'+delta+'</span>'+spark+'</button>';
+}
+function dashStats(c){
+  let cells;
+  if(c.mood) cells=[['Good',c.mood.good,'#4a9e6a'],['Normal',c.mood.normal,'#5b8def'],['Bad',c.mood.bad,'#e85d40']];
+  else { const n=dashNums(c), avg=n.length?n.reduce((a,b)=>a+b,0)/n.length:null;
+    cells=[['Latest',n.length?dashFmt(n[n.length-1],c.fmt):'\u2014'],['Average',dashFmt(avg,c.fmt,true)],['Change',dashDiff(c,n)||'\u2014']]; }
+  return '<div class="dash-stats">'+cells.map(x=>'<div class="dash-stat"><div class="dash-stat-l">'+(x[2]?'<i style="background:'+x[2]+'"></i>':'')+x[0]+'</div><div class="dash-stat-v">'+x[1]+'</div></div>').join('')+'</div>';
+}
+function paintDashboard(cards){
+  const area=document.getElementById('charts-area'), tab=document.getElementById('tab-dashboard'), content=document.getElementById('content');
+  const card=dashDetail ? cards.find(c=>c.id===dashDetail) : null;
+  if(dashDetail && !card) dashDetail=null;
+  document.querySelector('#tab-dashboard .sect-tabs').classList.toggle('hidden', !!card);
+  document.getElementById('dash-back').classList.toggle('hidden', !card);
+  document.getElementById('dash-back-lbl').textContent = dashSection==='health' ? 'Health' : 'Chinese';
+  area.classList.toggle('detail', !!card);
+  // Fill the screen exactly, so nothing needs scrolling
+  const cs=getComputedStyle(content);
+  const avail=content.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  tab.style.minHeight = avail>200 ? avail+'px' : '';
+  if(!card){ area.innerHTML='<div class="tile-grid">'+cards.map(dashTile).join('')+'</div>'; return; }
+  const put=()=>{ const i=card.html.lastIndexOf('</div>'); area.innerHTML=card.html.slice(0,i)+dashStats(card)+card.html.slice(i); };
+  put();
+  // Second pass: stretch the chart to use the height that is left over
+  if(!paintDashboard._again && avail>200){
+    const svg=area.querySelector('.chart-card>svg'), cc=area.querySelector('.chart-card');
+    if(svg && cc){
+      const r=svg.getBoundingClientRect();
+      let used=0; [...cc.children].forEach(ch=>{ if(ch!==svg) used+=ch.getBoundingClientRect().height+parseFloat(getComputedStyle(ch).marginTop)+parseFloat(getComputedStyle(ch).marginBottom); });
+      const ccs=getComputedStyle(cc);
+      const room=cc.getBoundingClientRect().height-used-parseFloat(ccs.paddingTop)-parseFloat(ccs.paddingBottom)-2;
+      const want=Math.max(260, Math.min(760, Math.round(room*500/r.width)));
+      if(r.width>0 && Math.abs(want-DASH_H)>8){
+        DASH_H=want; paintDashboard._again=true;
+        try{ renderCharts(); } finally { paintDashboard._again=false; DASH_H=300; }
+      }
+    }
+  }
+}
+function openChart(id){ dashDetail=id; document.getElementById('content').scrollTop=0; renderCharts(); }
+function closeChart(){ dashDetail=null; renderCharts(); }
+
 
 function toggleStudy(key){
   // Radio style — select only this one
@@ -1546,7 +1651,7 @@ function computePerfectWeeks(){
 }
 
 function setSection(s){
-  dashSection=s;
+  dashSection=s; dashDetail=null;
   document.getElementById('sect-health').classList.toggle('active',s==='health');
   document.getElementById('sect-chinese').classList.toggle('active',s==='chinese');
   document.getElementById('content').scrollTop=0;
