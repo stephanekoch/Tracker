@@ -6,11 +6,13 @@ export default async function handler(req, res) {
   const gh = await getSettings('gh_'), fs = await getSettings('fs_');
   return res.status(200).json({
     google: { configured: !!process.env.GH_CLIENT_ID, status: gh.gh_status || 'not_connected', lastSync: gh.gh_last_sync || null, lastError: gh.gh_last_error || null,
-              webhook: !!process.env.GH_WEBHOOK_SECRET },
+              webhook: !!process.env.GH_WEBHOOK_SECRET, lastExercise: safeJson(gh.gh_last_exercise) },
     fatsecret: { configured: !!process.env.FS_CONSUMER_KEY, status: !(fs.fs_token || process.env.FS_ACCESS_TOKEN) ? 'not_connected' : (fs.fs_last_error ? 'error' : (fs.fs_status || 'connected')),
                  lastSync: fs.fs_last_sync || null, lastError: fs.fs_last_error || null },
   });
 }
+
+function safeJson(s) { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 
 // Shown at /api/google-health/register (rewritten here)
 function registerPage(req, res) {

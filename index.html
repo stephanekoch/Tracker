@@ -111,6 +111,10 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
 #ae-input{flex:1;min-width:0;height:48px;box-sizing:border-box;border:1px solid #e3c9c1;border-radius:10px;background:#fff;padding:0 14px;font-family:'Inter',sans-serif;font-size:22px;font-weight:700;color:var(--text);outline:none;-webkit-appearance:none;}
 #ae-input:focus{border-color:#e85d40;}
 #ae-unit{font-size:15px;color:#6f6f6f;}
+.ae-sleep{display:flex;align-items:center;gap:8px;} .ae-sleep.hidden{display:none;}
+.ae-sleep input{flex:1;min-width:0;width:0;height:48px;box-sizing:border-box;border:1px solid #e3c9c1;border-radius:10px;background:#fff;padding:0 14px;font-family:'Inter',sans-serif;font-size:22px;font-weight:700;color:var(--text);outline:none;-webkit-appearance:none;text-align:center;}
+.ae-sleep input:focus{border-color:#e85d40;}
+.ae-sleep span{font-size:15px;color:#6f6f6f;flex:none;}
 .ae-gym{display:flex;gap:8px;} .ae-gym.hidden{display:none;}
 .ae-gym button{flex:1;height:44px;border-radius:10px;border:1px solid #e3c9c1;background:#fff;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;color:#3a3a3a;cursor:pointer;}
 .ae-gym button.on{background:#e85d40;border-color:#e85d40;color:#fff;}
@@ -252,7 +256,7 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
       <canvas id="fav-canvas" width="28" height="28" style="border-radius:7px;flex-shrink:0;"></canvas>
       <div>
         <div class="app-title">Tracker</div>
-        <div class="app-sub"><span id="app-sub-normal">Health &amp; Chinese</span><span id="app-sub-done" style="display:none;color:#1f6e41;font-weight:700;">Day complete</span> <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v78</span></div>
+        <div class="app-sub"><span id="app-sub-normal">Health &amp; Chinese</span><span id="app-sub-done" style="display:none;color:#1f6e41;font-weight:700;">Day complete</span> <span style="opacity:.55;cursor:pointer;" onclick="showDiag()">· v79</span></div>
         <div id="sync-note" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin-left:auto;">
@@ -337,6 +341,10 @@ input[type=date]{border:none;background:transparent;font-family:'Inter',sans-ser
           <div class="ae-box">
             <div class="ae-head"><label for="ae-input" id="ae-label">Value</label><span id="ae-synced"></span></div>
             <div class="ae-inputrow" id="ae-inputrow"><input id="ae-input" type="text" autocomplete="off"/><span id="ae-unit"></span></div>
+            <div class="ae-sleep hidden" id="ae-sleep">
+              <input id="ae-h" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" placeholder="7" aria-label="Hours" oninput="aeSleepInput(this)"/><span>h</span>
+              <input id="ae-m" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" placeholder="30" aria-label="Minutes" oninput="aeSleepInput(this)"/><span>min</span>
+            </div>
             <div class="ae-gym hidden" id="ae-gym">
               <button type="button" id="ae-yes" onclick="aeGym(true)">Yes, trained</button>
               <button type="button" id="ae-no" onclick="aeGym(false)">No</button>
@@ -752,19 +760,42 @@ function openEditor(k){
   const sv=fmtAuto(k, autoVals[k]);
   document.getElementById('ae-synced').textContent = sv ? 'Synced value: '+sv : '';
   const isGym = k==='gym';
-  document.getElementById('ae-inputrow').classList.toggle('hidden', isGym);
+  const isSleep = k==='sleep';
+  document.getElementById('ae-inputrow').classList.toggle('hidden', isGym||isSleep);
+  document.getElementById('ae-sleep').classList.toggle('hidden', !isSleep);
   document.getElementById('ae-gym').classList.toggle('hidden', !isGym);
   document.getElementById('ae-error').classList.add('hidden');
   document.getElementById('ae-usesynced').classList.toggle('hidden', !manualSet.has(k));
   const d=new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
   document.getElementById('ae-note').textContent='Your value is kept for '+d+'. '+SRC_NAME[AUTO_SRC[k]]+' won\u2019t overwrite it.';
   if(isGym){ aeGym(!!toggles.gym); return; }
+  if(isSleep){
+    const m=String(autoValue('sleep')||'').match(/^(\d{1,2}):(\d{1,2})$/);
+    const h=document.getElementById('ae-h'), mi=document.getElementById('ae-m');
+    h.value = m ? String(+m[1]) : ''; mi.value = m ? String(+m[2]).padStart(2,'0') : '';
+    setTimeout(()=>{ h.focus(); h.select(); }, 30);
+    return;
+  }
   const inp=document.getElementById('ae-input');
   inp.value = k==='steps' ? (autoValue(k)||'').replace(/,/g,'') : autoValue(k);
   inp.setAttribute('inputmode', k==='sleep' ? 'numeric' : (k==='bodyweight' ? 'decimal' : 'numeric'));
   inp.placeholder = k==='sleep' ? '7:30' : (k==='bodyweight' ? '67.5' : '0');
   document.getElementById('ae-unit').textContent = AUTO_UNIT[k]||'';
   setTimeout(()=>{ inp.focus(); inp.select(); }, 30);
+}
+function aeSleepInput(el){
+  el.value=el.value.replace(/\D/g,'').slice(0,2);
+  document.getElementById('ae-error').classList.add('hidden');
+  // Two digits, or a first digit that can't start a longer hour, moves on to minutes
+  if(el.id==='ae-h' && (el.value.length===2 || (el.value.length===1 && +el.value>1))){ const m=document.getElementById('ae-m'); m.focus(); m.select(); }
+}
+function aeSleepValue(){
+  const h=document.getElementById('ae-h').value.trim(), m=document.getElementById('ae-m').value.trim();
+  if(h==='' && m==='') return {ok:true,v:''};
+  const hh=h===''?0:+h, mm=m===''?0:+m;
+  if(hh>16) return {ok:false,msg:'Hours should be 16 or less'};
+  if(mm>59) return {ok:false,msg:'Minutes should be between 0 and 59'};
+  return {ok:true,v:hh+':'+String(mm).padStart(2,'0')};
 }
 function aeGym(v){ aeGymVal=v; document.getElementById('ae-yes').classList.toggle('on',v); document.getElementById('ae-no').classList.toggle('on',!v); }
 function closeEditor(){
@@ -787,7 +818,7 @@ async function saveEditor(){
   let val;
   if(k==='gym') val=aeGymVal;
   else {
-    const p=aeParse(k, document.getElementById('ae-input').value);
+    const p = k==='sleep' ? aeSleepValue() : aeParse(k, document.getElementById('ae-input').value);
     if(!p.ok){ const er=document.getElementById('ae-error'); er.textContent=p.msg; er.classList.remove('hidden'); return; }
     val=p.v;
   }
@@ -2011,6 +2042,9 @@ function showDiag(){
       + (ls.moodError?' <span style="color:#c0392b">'+ls.moodError+'</span>':'')
       + (ls.maxColumns?' · sheet has '+ls.maxColumns+' columns':'')) : 'none yet this session');
   row('google health', ((integ.google||{}).status||'?') + ((integ.google||{}).webhook?' · webhook secret set':' · <span style="color:#c0392b">no webhook secret</span>') + ((integ.google||{}).lastError?' · <span style="color:#c0392b">'+integ.google.lastError+'</span>':''));
+  const le=(integ.google||{}).lastExercise;
+  row('workouts seen', !le ? 'not checked yet' : (le.ok===false ? '<span style="color:#c0392b">Google refused the request ('+(le.status||'?')+') '+(le.error||'')+'</span>'
+      : le.date+': '+((le.sessions||[]).length ? le.sessions.map(s=>s.type.toLowerCase().replace(/_/g,' ')+(s.mins!=null?' '+s.mins+' min':'')).join(', ') : 'none')));
   row('fatsecret', ((integ.fatsecret||{}).status||'?') + ((integ.fatsecret||{}).lastError?' · <span style="color:#c0392b">'+integ.fatsecret.lastError+'</span>':''));
   row('manual sync', '<button onclick="diagSync()" style="border:1px solid #e85d40;background:transparent;color:#e85d40;border-radius:6px;padding:2px 8px;font-family:Inter,sans-serif;font-size:11px;cursor:pointer;">Pull '+(document.getElementById('entry-date').value||todayStr())+' now</button> <span id="diag-sync-out"></span>');
   row('today',todayStr());

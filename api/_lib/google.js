@@ -1,9 +1,9 @@
 // Google Health API: token handling and one fetcher per metric.
 import { getSetting, setSetting, nextDay } from './core.js';
 const GH = 'https://health.googleapis.com/v4/users/me/dataTypes';
-export const GYM_TYPES = new Set(['STRENGTH_TRAINING','WEIGHTLIFTING','WEIGHTS','FREE_WEIGHTS','WEIGHT_MACHINES','POWERLIFTING',
-  'FUNCTIONAL_STRENGTH_TRAINING','CIRCUIT_TRAINING','CROSSFIT','HIIT','BODY_WEIGHT','CALISTHENICS','WORKOUT','CROSS_TRAINING',
-  'BOOTCAMP','TRX','CORE_TRAINING','RESISTANCE_BANDS','TABATA_WORKOUT','INTERVAL_WORKOUT']);
+// Sessions of these types never count as a workout (everyday movement, not training).
+export const NOT_WORKOUT = new Set(['WALKING', 'WALK', 'SLEEP', 'MEDITATION', 'BREATHING', 'STILL']);
+const MIN_WORKOUT_MINUTES = 10;
 
 function civil(iso) { const [y, m, d] = iso.split('-').map(Number); return { date: { year: y, month: m, day: d } }; }
 function deepFind(obj, re, depth = 0) {
@@ -77,15 +77,53 @@ export async function fetchWeight(token, date, raw) {
   if (kg == null) { const lb = deepFind(w, /pound|lb/i); if (lb != null) kg = lb * 0.45359237; }
   return (kg != null && kg > 20 && kg < 300) ? Math.round(kg * 10) / 10 : undefined;
 }
+function londonDay(iso) {
+  const t = Date.parse(iso);
+  if (!isFinite(t)) return null;
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t));
+}
+function civilDay(c) {
+  if (!c) return null;
+  if (typeof c === 'string') return /^\d{4}-\d{2}-\d{2}/.test(c) ? c.slice(0, 10) : null;
+  const d = c.date || c;
+  if (d && d.year && d.month && d.day) return `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`;
+  return null;
+}
+function seconds(v) { const n = parseFloat(String(v == null ? '' : v)); return isFinite(n) ? n : null; }
+// Boils one exercise data point down to { type, day, mins }. The day is the day the session ended.
+export function describeSession(p) {
+  const e = (p && p.exercise) || {};
+  const i = e.interval || {};
+  const day = civilDay(i.civilEndTime) || londonDay(i.endTime) || civilDay(i.civilStartTime) || londonDay(i.startTime);
+  let mins = null;
+  const a = Date.parse(i.startTime), b = Date.parse(i.endTime);
+  if (isFinite(a) && isFinite(b) && b > a) mins = Math.round((b - a) / 60000);
+  if (mins == null) { const sec = seconds(e.activeDuration ?? e.duration ?? e.metricsSummary?.activeDuration); if (sec != null) mins = Math.round(sec / 60); }
+  const type = String(e.exerciseType || e.activityType || e.type || 'UNKNOWN').toUpperCase();
+  return { type, day, mins };
+}
+export function isWorkout(s) { return !NOT_WORKOUT.has(s.type) && (s.mins == null || s.mins >= MIN_WORKOUT_MINUTES); }
+
+// Any real exercise session that ended on the date counts (the same idea as Google's "exercise days").
 // Returns true/false when the query worked (so gym can be switched off), undefined when it didn't.
 export async function fetchGym(token, date, raw) {
-  const f = `exercise.interval.civil_end_time >= "${date}" AND exercise.interval.civil_end_time < "${nextDay(date)}"`;
-  const res = await gh(token, `exercise/dataPoints?pageSize=25&filter=${encodeURIComponent(f)}`);
+  const prev = new Date(Date.parse(date + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
+  const f = `exercise.interval.civil_start_time >= "${prev}" AND exercise.interval.civil_start_time < "${nextDay(date)}"`;
+  let res = await gh(token, `exercise/dataPoints?pageSize=50&filter=${encodeURIComponent(f)}`);
+  let how = 'filtered';
+  if (!res.ok) {                       // filter not accepted: fall back to the most recent sessions
+    if (raw) raw.exerciseFilterError = res.body;
+    res = await gh(token, 'exercise/dataPoints?pageSize=50'); how = 'unfiltered';
+  }
   if (raw) raw.exercise = res.body;
-  if (!res.ok) return undefined;
-  const types = (res.body.dataPoints || []).map(p => p.exercise?.exerciseType).filter(Boolean);
-  if (raw) raw.exerciseTypes = types;
-  return types.some(t => GYM_TYPES.has(t));
+  if (!res.ok) {
+    await setSetting('gh_last_exercise', JSON.stringify({ date, ok: false, status: res.status, error: (res.body?.error?.message || '').slice(0, 160) }));
+    return undefined;
+  }
+  const sessions = (res.body.dataPoints || []).map(describeSession).filter(s => s.day === date);
+  if (raw) { raw.exerciseSessions = sessions; raw.exerciseQuery = how; }
+  await setSetting('gh_last_exercise', JSON.stringify({ date, ok: true, how, sessions: sessions.slice(0, 6) }));
+  return sessions.some(isWorkout);
 }
 
 export async function googleDay(date, only, raw) {
